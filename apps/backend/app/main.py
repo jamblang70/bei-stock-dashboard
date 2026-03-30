@@ -30,10 +30,7 @@ app.add_middleware(RateLimitMiddleware)
 # CORS — update origins for production
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "https://bei-dashboard.com",
-    ],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
