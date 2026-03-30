@@ -9,7 +9,7 @@ import SectorComparison from "@/components/stock/SectorComparison";
 import AddToWatchlistButton from "@/components/watchlist/AddToWatchlistButton";
 import type { StockProfile, FundamentalsData, SectorComparison as SectorComparisonType } from "@/types";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://bei-stock-dashboard-production.up.railway.app/api/v1";
 
 async function fetchStockProfile(code: string): Promise<StockProfile | null> {
   try {
