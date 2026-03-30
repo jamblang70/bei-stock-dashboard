@@ -33,11 +33,13 @@ export default function DashboardPage() {
       if (sector) params.set("sector", sector);
 
       const res = await apiGet<PaginatedResponse<RankingItem>>(
-        `/ranking?${params.toString()}`
+        `/ranking/?${params.toString()}`
       );
+      console.log("Ranking response:", res);
       setData(res.data ?? res.items ?? []);
-      setTotal(res.total);
-    } catch {
+      setTotal(res.total ?? 0);
+    } catch (err) {
+      console.error("Ranking fetch error:", err);
       setError("Gagal memuat data ranking. Silakan coba lagi.");
       setData([]);
       setTotal(0);
