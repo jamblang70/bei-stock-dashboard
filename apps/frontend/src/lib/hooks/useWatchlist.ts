@@ -28,13 +28,13 @@ export function useWatchlist(token: string | undefined): UseWatchlistResult {
     setError(null);
 
     api
-      .get<{ data: WatchlistItem[]; total: number } | WatchlistItem[]>("/watchlist/", {
+      .get<any>("/watchlist/", {
         headers: { Authorization: `Bearer ${token}` },
       })
       .then((res) => {
         if (!cancelled) {
-          const items = Array.isArray(res.data) ? res.data : (res.data as any).data ?? [];
-          setItems(items);
+          const data = Array.isArray(res.data) ? res.data : (res.data?.data ?? []);
+          setItems(data);
         }
       })
       .catch((err: unknown) => {
@@ -56,14 +56,15 @@ export function useWatchlist(token: string | undefined): UseWatchlistResult {
     async (code: string) => {
       if (!token) return;
 
-      // Optimistic add — buat placeholder item
+      // Optimistic add — flat format matching backend response
       const optimisticItem: WatchlistItem = {
-        id: Date.now(),
-        stock: { id: 0, code, name: code, sector: null, sub_sector: null, is_active: true },
-        last_price: null,
-        change_nominal: null,
+        code,
+        name: code,
+        sector: null,
+        price: null,
         change_pct: null,
         score: null,
+        recommendation: null,
         added_at: new Date().toISOString(),
       };
 
@@ -72,16 +73,14 @@ export function useWatchlist(token: string | undefined): UseWatchlistResult {
       try {
         const res = await api.post<WatchlistItem>(
           "/watchlist/",
-          { stock_code: code },
+          { code },
           { headers: { Authorization: `Bearer ${token}` } }
         );
-        // Ganti placeholder dengan data asli dari server
         setItems((prev) =>
-          prev.map((item) => (item.id === optimisticItem.id ? res.data : item))
+          prev.map((item) => (item.code === optimisticItem.code ? res.data : item))
         );
       } catch (err: unknown) {
-        // Rollback
-        setItems((prev) => prev.filter((item) => item.id !== optimisticItem.id));
+        setItems((prev) => prev.filter((item) => item.code !== optimisticItem.code));
         const message = err instanceof Error ? err.message : "Gagal menambahkan saham";
         setError(message);
         throw err;
@@ -94,16 +93,14 @@ export function useWatchlist(token: string | undefined): UseWatchlistResult {
     async (code: string) => {
       if (!token) return;
 
-      // Simpan snapshot untuk rollback
       const snapshot = items;
-      setItems((prev) => prev.filter((item) => item.stock.code !== code));
+      setItems((prev) => prev.filter((item) => (item.code ?? (item as any).stock?.code) !== code));
 
       try {
         await api.delete(`/watchlist/${code}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
       } catch (err: unknown) {
-        // Rollback ke snapshot
         setItems(snapshot);
         const message = err instanceof Error ? err.message : "Gagal menghapus saham";
         setError(message);
