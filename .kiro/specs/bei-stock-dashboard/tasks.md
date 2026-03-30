@@ -1,0 +1,285 @@
+# Implementation Plan: BEI Stock Dashboard
+
+## Overview
+
+Implementasi full-stack BEI Stock Dashboard menggunakan monorepo dengan Next.js (frontend) dan FastAPI (backend). Urutan implementasi mengikuti dependency: setup → database → auth → data pipeline → scoring → API endpoints → frontend components → AI analyzer → deployment config.
+
+## Tasks
+
+- [x] 1. Setup monorepo dan project structure
+  - Inisialisasi monorepo dengan struktur `apps/frontend` (Next.js 14 App Router) dan `apps/backend` (FastAPI)
+  - Setup `package.json` root dengan workspaces, `pyproject.toml` untuk backend
+  - Konfigurasi ESLint, Prettier untuk frontend; Ruff, Black untuk backend
+  - Buat `.env.example` untuk frontend dan backend sesuai environment variables di design
+  - _Requirements: 12.3_
+
+- [x] 2. Database schema dan migrations
+  - [x] 2.1 Buat semua tabel PostgreSQL sesuai schema di design document
+    - Implementasi file migration Alembic untuk semua tabel: `users`, `refresh_tokens`, `login_attempts`, `stocks`, `stock_prices`, `price_history`, `fundamental_data`, `stock_scores`, `watchlists`, `ai_analysis`, `sector_metrics`, `corporate_actions`, `data_source_health`
+    - _Requirements: 1.8, 6.2, 9.5, 9.6_
+  - [x] 2.2 Buat semua database indexes
+    - Tambahkan indexes: `idx_stocks_code`, `idx_stocks_sector`, `idx_stock_scores_score`, `idx_price_history_stock_date`, `idx_fundamental_data_stock_period`, `idx_watchlists_user`, `idx_ai_analysis_stock`, `idx_login_attempts_ip`
+    - _Requirements: 12.4_
+  - [x] 2.3 Setup SQLAlchemy ORM models di `app/models/`
+    - Buat model class untuk setiap tabel dengan relasi yang sesuai
+    - _Requirements: 12.4_
+
+- [x] 3. Auth Service — backend
+  - [x] 3.1 Implementasi `app/services/auth_service.py`
+    - Fungsi `register_user`: validasi email unik, hash password bcrypt cost 12, simpan ke DB, kirim email verifikasi
+    - Fungsi `login_user`: verifikasi kredensial, generate JWT access token (1 jam) + refresh token (7 hari), simpan refresh token hash ke DB
+    - Fungsi `refresh_access_token`: validasi refresh token, terbitkan access token baru
+    - Fungsi `logout_user`: revoke refresh token di DB
+    - Fungsi `verify_email`: validasi token verifikasi, set `email_verified = true`
+    - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8_
+  - [x] 3.2 Implementasi account lockout di `app/middleware/rate_limiter.py`
+    - Catat login attempt ke tabel `login_attempts`
+    - Blokir IP selama 15 menit setelah 5 kali gagal berturut-turut
+    - _Requirements: 12.6_
+  - [x] 3.3 Implementasi rate limiting middleware
+    - 100 req/menit untuk authenticated users, 20 req/menit untuk public endpoints per IP
+    - Gunakan Redis counter dengan TTL 60 detik
+    - _Requirements: 12.1, 12.2_
+  - [x] 3.4 Buat API router `app/api/auth.py`
+    - Endpoint: `POST /register`, `POST /login`, `POST /refresh`, `POST /logout`, `GET /verify-email`
+    - Buat Pydantic schemas di `app/schemas/auth.py`
+    - _Requirements: 1.1, 1.4, 1.5, 1.6, 1.7_
+  - [x]* 3.5 Tulis unit tests untuk auth_service
+    - Test registrasi dengan email duplikat (req 1.2)
+    - Test login dengan kredensial valid dan invalid (req 1.4, 1.5)
+    - Test refresh token flow (req 1.6)
+    - Test logout revocation (req 1.7)
+    - _Requirements: 1.1–1.8_
+
+- [x] 4. Checkpoint — Auth service
+  - Pastikan semua tests auth pass, jalankan migration ke database dev, verifikasi endpoint auth bisa dipanggil via curl/Postman.
+
+- [x] 5. Data Pipeline
+  - [x] 5.1 Implementasi `app/services/data_pipeline.py`
+    - Fungsi `fetch_intraday_prices`: ambil harga terkini dari Yahoo Finance (`yfinance`) untuk semua saham aktif, upsert ke `stock_prices`
+    - Fungsi `fetch_daily_ohlcv`: ambil data OHLCV harian, upsert ke `price_history`
+    - Fungsi `fetch_fundamental_data`: ambil data fundamental dari EODHD API, upsert ke `fundamental_data`
+    - Fungsi `fetch_corporate_actions`: ambil corporate actions, simpan ke `corporate_actions`
+    - _Requirements: 9.1, 9.2, 9.3, 9.5_
+  - [x] 5.2 Implementasi health monitoring di data pipeline
+    - Setiap job catat status ke `data_source_health`
+    - Jika sumber gagal > 30 menit, set `is_healthy = false`
+    - _Requirements: 9.4_
+  - [x] 5.3 Setup APScheduler di `app/workers/scheduler.py`
+    - Job intraday: setiap 15 menit, 09:00–16:30 WIB hari bursa
+    - Job daily OHLCV: setiap hari 17:00 WIB
+    - Job fundamental: setiap hari 06:00 WIB
+    - Job sector metrics: setiap hari 17:30 WIB
+    - Job score calculation: setiap hari 17:00 WIB
+    - _Requirements: 9.1, 9.2, 9.3_
+  - [x]* 5.4 Tulis unit tests untuk data pipeline
+    - Mock yfinance dan EODHD API calls
+    - Test upsert logic untuk price_history (req 9.5)
+    - Test health monitoring flag (req 9.4)
+    - _Requirements: 9.1–9.6_
+
+- [x] 6. Scoring Engine
+  - [x] 6.1 Implementasi `app/services/scoring_engine.py`
+    - Fungsi `calculate_valuation_score`: PER vs median sektor, PBV vs median sektor, EV/EBITDA vs historis 3 tahun (bobot 40%)
+    - Fungsi `calculate_quality_score`: ROE, Net Profit Margin, DER, Current Ratio (bobot 40%)
+    - Fungsi `calculate_momentum_score`: perubahan harga 1 bulan dan 3 bulan vs sektor, volume relatif vs MA20 (bobot 20%)
+    - Fungsi `calculate_score`: gabungkan ketiga komponen, handle partial score jika data tidak lengkap
+    - Fungsi `determine_recommendation`: mapping score ke label ("Beli Kuat" ≥75, "Beli" 60–74, "Tahan" 40–59, "Jual" <40)
+    - _Requirements: 5.1, 5.2, 5.3, 5.4, 11.1_
+  - [x] 6.2 Implementasi `app/workers/score_worker.py`
+    - Ambil semua emiten aktif, jalankan scoring, simpan ke `stock_scores`, invalidate Redis cache
+    - Hitung median metrik per sektor, simpan ke `sector_metrics`
+    - _Requirements: 5.3, 8.3_
+  - [x]* 6.3 Tulis property test untuk scoring engine
+    - **Property 1: Score selalu dalam range 0–100**
+    - **Validates: Requirements 5.1**
+  - [x]* 6.4 Tulis property test untuk weighted score calculation
+    - **Property 2: Weighted sum 40%+40%+20% = total score (ketika semua komponen tersedia)**
+    - **Validates: Requirements 5.2**
+  - [x]* 6.5 Tulis unit tests untuk scoring engine
+    - Test partial score ketika data fundamental tidak lengkap (req 5.4)
+    - Test semua label rekomendasi (req 11.1)
+    - Test sector median calculation dengan < 3 emiten (req 8.4)
+    - _Requirements: 5.1–5.4, 11.1_
+
+- [x] 7. Stock API Endpoints
+  - [x] 7.1 Implementasi `app/services/stock_service.py`
+    - Fungsi `search_stocks`: full-text search case-insensitive pada `code` dan `name`, max 10 hasil
+    - Fungsi `get_stock_profile`: ambil data lengkap emiten + harga terkini + score terbaru
+    - Fungsi `get_price_history`: ambil dari `price_history` sesuai range (1w/1m/3m/6m/1y/5y)
+    - Fungsi `get_fundamentals`: ambil data fundamental terbaru
+    - Fungsi `get_sector_comparison`: bandingkan metrik emiten vs median sektor dari `sector_metrics`
+    - Fungsi `get_all_sectors`: daftar sektor unik dari tabel `stocks`
+    - _Requirements: 2.1, 2.2, 2.4, 2.5, 3.1, 3.2, 3.3, 3.5, 8.1, 8.4_
+  - [x] 7.2 Buat API router `app/api/stocks.py`
+    - Endpoint: `GET /search`, `GET /`, `GET /{code}`, `GET /{code}/price-history`, `GET /{code}/fundamentals`, `GET /{code}/score`, `GET /{code}/sector-comparison`, `GET /sectors`
+    - Tambahkan `data_warning` response header jika `data_source_health.is_healthy = false`
+    - Buat Pydantic schemas di `app/schemas/stocks.py`
+    - _Requirements: 2.1–2.5, 3.1–3.7, 8.1–8.4, 9.4, 12.5_
+  - [x]* 7.3 Tulis unit tests untuk stock service
+    - Test search case-insensitive (req 2.4)
+    - Test search tidak ada hasil (req 2.3)
+    - Test sector comparison dengan < 3 emiten (req 8.4)
+    - Test response time < 300ms untuk list endpoint (req 12.5)
+    - _Requirements: 2.1–2.5, 3.1–3.7, 8.1–8.4_
+
+- [x] 8. Watchlist dan Ranking API
+  - [x] 8.1 Implementasi `app/api/watchlist.py`
+    - `GET /`: ambil watchlist user + harga terkini + score
+    - `POST /`: tambah saham, validasi max 50 saham, cek duplikasi
+    - `DELETE /{code}`: hapus saham dari watchlist
+    - Buat Pydantic schemas di `app/schemas/watchlist.py`
+    - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6_
+  - [x] 8.2 Implementasi `app/api/ranking.py`
+    - `GET /`: daftar saham dengan sort (default: score DESC), filter sektor, pagination 25 per halaman
+    - Kolom: code, name, sector, last_price, score, per, pbv, roe, dividend_yield
+    - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5_
+  - [x]* 8.3 Tulis unit tests untuk watchlist dan ranking
+    - Test tambah saham duplikat (req 6.3)
+    - Test batas 50 saham (req 6.6)
+    - Test pagination ranking (req 7.5)
+    - Test sort by kolom (req 7.3)
+    - _Requirements: 6.1–6.7, 7.1–7.5_
+
+- [x] 9. Checkpoint — Backend API lengkap
+  - Pastikan semua endpoint bisa diakses, semua tests pass. Verifikasi rate limiting dan auth middleware berjalan benar.
+
+- [x] 10. Frontend — Setup dan Auth
+  - [x] 10.1 Setup Next.js 14 App Router di `apps/frontend`
+    - Konfigurasi NextAuth.js untuk JWT session
+    - Setup Axios/fetch wrapper di `src/lib/api.ts` dengan interceptor untuk attach Bearer token dan handle 401
+    - Buat `src/lib/auth.ts` dengan helper functions
+    - _Requirements: 1.4, 1.6_
+  - [x] 10.2 Buat halaman login (`app/(auth)/login/page.tsx`) dan register (`app/(auth)/register/page.tsx`)
+    - Form login dengan email + password, handle error 401 tanpa detail spesifik
+    - Form register dengan email, password, nama
+    - Redirect ke watchlist setelah login berhasil
+    - _Requirements: 1.1, 1.4, 1.5, 6.7_
+  - [x]* 10.3 Tulis unit tests untuk auth forms
+    - Test form validation
+    - Test redirect setelah login
+    - _Requirements: 1.4, 1.5_
+
+- [x] 11. Frontend — SearchBar dan Stock Profile
+  - [x] 11.1 Buat komponen `SearchBar.tsx` dan `SearchResults.tsx`
+    - Input dengan debounce 300ms, panggil `GET /stocks/search?q=`
+    - Dropdown autocomplete max 10 hasil
+    - Tampilkan "Saham tidak ditemukan" jika hasil kosong
+    - Case-insensitive display
+    - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5_
+  - [x] 11.2 Buat halaman Stock Profile `app/stock/[code]/page.tsx`
+    - Server Component untuk SSR data awal
+    - Render `StockHeader.tsx`: nama, kode, sektor, harga, perubahan nominal+%, volume
+    - Render `MetricsCard.tsx`: PER, PBV, ROE, Dividend Yield (tampilkan "N/A" jika tidak ada)
+    - _Requirements: 3.1, 3.2, 3.3, 3.4_
+  - [x] 11.3 Buat komponen `PriceChart.tsx`
+    - Gunakan Recharts atau ECharts untuk grafik OHLCV
+    - Tombol range: 1W, 1M, 3M, 6M, 1Y, 5Y
+    - Update chart < 1 detik saat ganti range (client-side fetch)
+    - _Requirements: 3.5, 3.6_
+  - [x] 11.4 Buat komponen `ScoreCard.tsx`
+    - Tampilkan score (0–100) dengan label kategori: "Sangat Baik" (80–100), "Baik" (60–79), "Cukup" (40–59), "Perlu Perhatian" (0–39)
+    - Breakdown komponen: valuasi, kualitas, momentum
+    - Tampilkan rekomendasi + max 3 faktor pendukung + disclaimer
+    - _Requirements: 3.7, 5.5, 11.2, 11.3_
+  - [x] 11.5 Buat komponen `AnalysisTab.tsx`
+    - Tab "Analisa" dengan tiga bagian: Valuasi, Kualitas Fundamental, Risiko
+    - Valuasi: PER, PBV, EV/EBITDA + perbandingan historis 3 tahun
+    - Kualitas: ROE, ROA, DER, Current Ratio, Net Profit Margin
+    - Risiko: Beta, volatilitas 30 hari, DER
+    - Tampilkan "Data historis tidak tersedia" jika data tidak ada
+    - _Requirements: 10.1, 10.2, 10.3, 10.4, 10.5_
+  - [x] 11.6 Buat komponen `SectorComparison.tsx`
+    - Tampilkan PER, PBV, ROE, Dividend Yield emiten vs median sektor
+    - Indikator visual (warna/ikon) untuk lebih baik/lebih buruk dari median
+    - Tampilkan "Data sektor tidak cukup untuk perbandingan" jika < 3 emiten
+    - _Requirements: 8.1, 8.2, 8.4_
+
+- [x] 12. Frontend — Ranking dan Watchlist
+  - [x] 12.1 Buat halaman Ranking `app/dashboard/page.tsx` dengan `RankingTable.tsx`
+    - Tabel sortable: klik header kolom toggle asc/desc
+    - Kolom: Stock_Code, nama, sektor, harga, score, PER, PBV, ROE, Dividend Yield
+    - Pagination 25 per halaman
+    - Integrasi `SectorFilter.tsx` untuk filter sektor
+    - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5_
+  - [x] 12.2 Buat komponen `AddToWatchlistButton.tsx`
+    - Tampil di setiap halaman Stock Profile (hanya jika user login)
+    - Redirect ke login jika belum login
+    - Tampilkan "Saham sudah ada di watchlist" jika duplikat
+    - _Requirements: 6.1, 6.3, 6.7_
+  - [x] 12.3 Buat halaman Watchlist `app/watchlist/page.tsx` dengan `WatchlistTable.tsx`
+    - Tampilkan semua saham di watchlist: harga terkini, perubahan harga, score
+    - Tombol hapus per baris, update UI tanpa reload (optimistic update)
+    - _Requirements: 6.4, 6.5_
+  - [x]* 12.4 Tulis unit tests untuk frontend components
+    - Test SearchBar debounce dan dropdown (req 2.1, 2.5)
+    - Test ScoreCard label kategori (req 5.5)
+    - Test AddToWatchlistButton redirect jika belum login (req 6.7)
+    - _Requirements: 2.1–2.5, 5.5, 6.1–6.7_
+
+- [x] 13. AI Analyzer
+  - [x] 13.1 Implementasi `app/services/ai_analyzer.py`
+    - Fungsi `check_data_sufficiency`: validasi ≥ 2 kuartal fundamental + ≥ 30 hari price history
+    - Fungsi `build_prompt`: buat prompt terstruktur Bahasa Indonesia sesuai template di design
+    - Fungsi `call_llm`: panggil OpenAI/Gemini API, parse JSON response
+    - Fungsi `save_analysis`: simpan hasil ke tabel `ai_analysis`
+    - Jika data tidak cukup, simpan record dengan `data_sufficiency = false` dan `missing_data_info`
+    - _Requirements: 13.1, 13.2, 13.3, 13.6, 13.7_
+  - [x] 13.2 Implementasi `app/workers/ai_worker.py`
+    - Worker yang dipicu setelah data pipeline selesai update
+    - Proses antrian emiten yang datanya baru diperbarui
+    - Invalidate Redis cache `ai_analysis:{stock_code}` setelah analisa baru tersimpan
+    - _Requirements: 13.5_
+  - [x] 13.3 Buat API router `app/api/analysis.py`
+    - `GET /{code}/ai`: ambil analisa terbaru dari DB (via Redis cache)
+    - `POST /{code}/ai/refresh`: trigger ulang analisa (rate-limited)
+    - _Requirements: 13.7, 13.8_
+  - [x] 13.4 Buat komponen `AIAnalysisTab.tsx`
+    - Tampilkan ringkasan, rekomendasi, valuation/quality/momentum analysis, supporting factors
+    - Loading indicator + estimasi waktu tunggu saat analisa sedang berjalan
+    - Disclaimer bahwa analisa bersifat informatif
+    - Tampilkan pesan "Data tidak cukup" dengan keterangan data yang kurang
+    - _Requirements: 13.1, 13.2, 13.3, 13.4, 13.6, 13.8_
+  - [x]* 13.5 Tulis unit tests untuk AI analyzer
+    - Test data sufficiency check (req 13.6)
+    - Test prompt building dengan data lengkap dan parsial
+    - Mock LLM API call, test JSON parsing
+    - _Requirements: 13.1–13.8_
+
+- [x] 14. Checkpoint — Full stack integration
+  - Pastikan semua tests pass. Verifikasi end-to-end flow: data pipeline → scoring → AI analyzer → API → frontend. Tanya user jika ada pertanyaan.
+
+- [x] 15. Custom hooks dan shared UI
+  - [x] 15.1 Buat custom hooks di `src/lib/hooks/`
+    - `useSearch`: debounced search dengan loading state
+    - `useWatchlist`: fetch, add, remove dengan optimistic updates
+    - `useStock`: fetch stock profile + price history
+    - _Requirements: 2.2, 6.4, 6.5_
+  - [x] 15.2 Buat shared UI components di `src/components/ui/`
+    - `Button`, `Badge` (untuk score label), `Spinner`, `Banner` (untuk data warning)
+    - Banner peringatan data tidak terkini (baca `data_warning` dari response header)
+    - _Requirements: 9.4, 5.5_
+
+- [x] 16. Deployment configuration
+  - [x] 16.1 Buat `vercel.json` untuk frontend deployment
+    - Konfigurasi environment variables, build command, output directory
+    - _Requirements: 12.3_
+  - [x] 16.2 Buat `railway.toml` dan `Dockerfile` untuk backend deployment
+    - Multi-stage Dockerfile: build + runtime
+    - Konfigurasi start command yang menjalankan FastAPI + APScheduler workers
+    - _Requirements: 9.1_
+  - [x] 16.3 Buat script inisialisasi database
+    - Script untuk run Alembic migrations di Supabase
+    - Seed data awal: daftar saham BEI aktif ke tabel `stocks`
+    - _Requirements: 9.5_
+
+- [x] 17. Final checkpoint
+  - Pastikan semua tests pass, tidak ada TypeScript errors, tidak ada Python linting errors. Tanya user jika ada pertanyaan sebelum selesai.
+
+## Notes
+
+- Tasks bertanda `*` bersifat opsional dan bisa dilewati untuk MVP yang lebih cepat
+- Setiap task mereferensikan requirements spesifik untuk traceability
+- Backend menggunakan Python (FastAPI, SQLAlchemy, Alembic, APScheduler)
+- Frontend menggunakan TypeScript (Next.js 14, NextAuth.js, Recharts)
+- Database: PostgreSQL (Supabase), Cache: Redis (Upstash)
