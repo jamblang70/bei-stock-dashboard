@@ -1,0 +1,4 @@
+# file: /Users/siswandana/Stock Screen IDX/apps/backend/app/main.py
+# hypothesis_version: 6.151.10
+
+['*', '/api/v1/analysis', '/api/v1/auth', '/api/v1/ranking', '/api/v1/stocks', '/api/v1/watchlist', '/docs', '/health', '/redoc', '0.1.0', 'analysis', 'auth', 'health', 'ok', 'ranking', 'status', 'stocks', 'watchlist']

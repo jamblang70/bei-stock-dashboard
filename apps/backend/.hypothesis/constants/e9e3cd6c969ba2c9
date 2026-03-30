@@ -1,0 +1,4 @@
+# file: /Users/siswandana/Stock Screen IDX/apps/backend/app/models/stock.py
+# hypothesis_version: 6.141.1
+
+[100, 255, 'AIAnalysis', 'CorporateAction', 'FundamentalData', 'PriceHistory', 'Stock', 'StockPrice', 'StockScore', 'Watchlist', 'calculated_at', 'corporate_actions', 'data_source_health', 'date', 'fundamental_data', 'period_type', 'period_year', 'price_history', 'sector', 'sector_metrics', 'stock', 'stock_id', 'stock_prices', 'stock_scores', 'stocks', 'stocks.id']

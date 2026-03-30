@@ -1,0 +1,4 @@
+# file: /Users/siswandana/Stock Screen IDX/apps/backend/app/api/stocks.py
+# hypothesis_version: 6.151.10
+
+[100, '/', '/search', '/sectors', '/{code}', '/{code}/fundamentals', '/{code}/score', '1m', '1w', '1y', '3m', '5y', '6m', 'Filter by sector', 'Search query', 'X-Data-Warning', 'asc', 'asc or desc', 'code', 'desc', 'true']

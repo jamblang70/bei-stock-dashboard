@@ -1,0 +1,4 @@
+# file: /Users/siswandana/Stock Screen IDX/apps/backend/app/api/analysis.py
+# hypothesis_version: 6.151.10
+
+[300, 3600, '/{code}/ai', '/{code}/ai/refresh', '1']

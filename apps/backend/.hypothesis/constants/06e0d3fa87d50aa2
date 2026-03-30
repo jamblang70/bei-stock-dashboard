@@ -1,0 +1,4 @@
+# file: /Users/siswandana/Stock Screen IDX/apps/backend/app/models/user.py
+# hypothesis_version: 6.141.1
+
+[100, 255, 'CASCADE', 'RefreshToken', 'User', 'Watchlist', 'all, delete-orphan', 'login_attempts', 'refresh_tokens', 'user', 'users', 'users.id']

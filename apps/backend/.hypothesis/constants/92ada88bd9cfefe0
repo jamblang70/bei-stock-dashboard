@@ -1,0 +1,4 @@
+# file: /Users/siswandana/Stock Screen IDX/apps/backend/app/workers/scheduler.py
+# hypothesis_version: 6.151.10
+
+[300, 600, '0,15,30,45', '9-16', 'Asia/Jakarta', 'Daily OHLCV Fetch', 'Score Calculation', 'daily_ohlcv', 'fundamental_data', 'intraday_prices', 'mon-fri', 'score_calculation', 'sector_metrics']

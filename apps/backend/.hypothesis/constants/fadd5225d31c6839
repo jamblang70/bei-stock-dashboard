@@ -1,0 +1,4 @@
+# file: /Users/siswandana/Stock Screen IDX/apps/backend/app/middleware/rate_limiter.py
+# hypothesis_version: 6.151.10
+
+[100, ',', 'Authorization', 'Bearer ', 'Retry-After', 'X-Forwarded-For', 'X-RateLimit-Limit', 'access', 'detail', 'sub', 'type', 'unknown']

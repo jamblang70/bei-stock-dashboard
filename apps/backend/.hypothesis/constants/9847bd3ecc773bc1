@@ -1,0 +1,4 @@
+# file: /Users/siswandana/Stock Screen IDX/apps/backend/app/api/ranking.py
+# hypothesis_version: 6.151.10
+
+[100, '/', 'Filter by sector', 'X-Data-Warning', 'asc', 'asc or desc', 'code', 'desc', 'dividend_yield', 'fd', 'last_price', 'name', 'pbv', 'per', 'roe', 'score', 'sp', 'ss', 'true']

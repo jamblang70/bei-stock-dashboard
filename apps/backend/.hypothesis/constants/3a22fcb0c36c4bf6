@@ -1,0 +1,4 @@
+# file: /Users/siswandana/Stock Screen IDX/apps/backend/app/api/auth.py
+# hypothesis_version: 6.151.10
+
+[201, ',', '/login', '/logout', '/refresh', '/register', '/verify-email', 'Logout berhasil.', 'X-Forwarded-For', 'unknown']

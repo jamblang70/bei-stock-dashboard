@@ -1,0 +1,4 @@
+# file: /Users/siswandana/Stock Screen IDX/apps/backend/app/services/stock_service.py
+# hypothesis_version: 6.141.1
+
+[180, 365, 1825, '1m', '1w', '1y', '3m', '5y', '6m', 'beta', 'better', 'book_value_per_share', 'calculated_at', 'change_nominal', 'change_pct', 'close', 'code', 'current_ratio', 'date', 'debt_to_equity', 'description', 'div_yield', 'dividend_per_share', 'dividend_yield', 'ebitda', 'emiten', 'eps', 'ev_ebitda', 'high', 'indicators', 'is_active', 'is_partial', 'listing_date', 'low', 'median_div_yield', 'median_pbv', 'median_per', 'median_roe', 'momentum_score', 'name', 'net_income', 'net_profit_margin', 'neutral', 'open', 'pbv', 'per', 'period_type', 'period_year', 'price', 'published_at', 'quality_score', 'recommendation', 'recorded_at', 'revenue', 'roa', 'roe', 'score', 'score_factors', 'sector', 'sektor', 'sub_sector', 'total_assets', 'total_debt', 'total_equity', 'valuation_score', 'volatility_30d', 'volume', 'worse']

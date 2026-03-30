@@ -1,0 +1,4 @@
+# file: /Users/siswandana/Stock Screen IDX/apps/backend/app/core/config.py
+# hypothesis_version: 6.141.1
+
+['.env', 'HS256', 'ignore']
