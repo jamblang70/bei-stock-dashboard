@@ -1,10 +1,10 @@
-"""Ranking API router."""
+"""Ranking API router — optimized with single JOIN query."""
 
 import math
 
 from fastapi import APIRouter, Depends, Query, Response
-from sqlalchemy import asc, desc, func, select, text
-from sqlalchemy.orm import Session, aliased
+from sqlalchemy import func, select, text
+from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.models.stock import FundamentalData, Stock, StockPrice, StockScore
@@ -22,94 +22,127 @@ def _add_data_warning(response: Response, db: Session) -> None:
 @router.get("/", response_model=RankingResponse)
 def get_ranking(
     response: Response,
-    sector: str | None = Query(None, description="Filter by sector"),
-    syariah: bool | None = Query(None, description="Filter syariah stocks only"),
-    sort_by: str = Query("score", description="Sort field: score, code, name, last_price, per, pbv, roe, dividend_yield"),
-    sort_order: str = Query("desc", description="asc or desc"),
+    sector: str | None = Query(None),
+    syariah: bool | None = Query(None),
+    sort_by: str = Query("score"),
+    sort_order: str = Query("desc"),
     page: int = Query(1, ge=1),
     per_page: int = Query(25, ge=1, le=100),
     db: Session = Depends(get_db),
 ):
-    """Return ranked list of stocks with score, price, and fundamental metrics."""
     _add_data_warning(response, db)
 
-    # Get all active stocks
-    stocks_query = db.query(Stock).filter(Stock.is_active == True)  # noqa: E712
+    # Latest score per stock (single query)
+    latest_score_sub = (
+        select(
+            StockScore.stock_id,
+            func.max(StockScore.calculated_at).label("max_calc"),
+        )
+        .group_by(StockScore.stock_id)
+        .subquery()
+    )
+
+    # Latest price per stock (single query)
+    latest_price_sub = (
+        select(
+            StockPrice.stock_id,
+            func.max(StockPrice.recorded_at).label("max_rec"),
+        )
+        .group_by(StockPrice.stock_id)
+        .subquery()
+    )
+
+    # Latest fundamental per stock (single query)
+    latest_fund_sub = (
+        select(
+            FundamentalData.stock_id,
+            func.max(FundamentalData.period_year).label("max_year"),
+        )
+        .group_by(FundamentalData.stock_id)
+        .subquery()
+    )
+
+    # Main query — single round trip
+    stmt = (
+        select(
+            Stock.id,
+            Stock.code,
+            Stock.name,
+            Stock.sector,
+            Stock.is_syariah,
+            StockScore.score,
+            StockScore.recommendation,
+            StockPrice.price.label("last_price"),
+            StockPrice.change_pct,
+            FundamentalData.per,
+            FundamentalData.pbv,
+            FundamentalData.roe,
+            FundamentalData.dividend_yield,
+        )
+        .outerjoin(latest_score_sub, Stock.id == latest_score_sub.c.stock_id)
+        .outerjoin(
+            StockScore,
+            (StockScore.stock_id == Stock.id)
+            & (StockScore.calculated_at == latest_score_sub.c.max_calc),
+        )
+        .outerjoin(latest_price_sub, Stock.id == latest_price_sub.c.stock_id)
+        .outerjoin(
+            StockPrice,
+            (StockPrice.stock_id == Stock.id)
+            & (StockPrice.recorded_at == latest_price_sub.c.max_rec),
+        )
+        .outerjoin(latest_fund_sub, Stock.id == latest_fund_sub.c.stock_id)
+        .outerjoin(
+            FundamentalData,
+            (FundamentalData.stock_id == Stock.id)
+            & (FundamentalData.period_year == latest_fund_sub.c.max_year),
+        )
+        .where(Stock.is_active == True)  # noqa: E712
+    )
+
     if sector:
-        stocks_query = stocks_query.filter(Stock.sector == sector)
+        stmt = stmt.where(Stock.sector == sector)
     if syariah:
-        stocks_query = stocks_query.filter(Stock.is_syariah == True)  # noqa: E712
+        stmt = stmt.where(Stock.is_syariah == True)  # noqa: E712
 
-    total = stocks_query.count()
-    total_pages = math.ceil(total / per_page) if total > 0 else 1
+    rows = db.execute(stmt).all()
 
-    # Determine sort order for Python-side sorting
-    reverse = sort_order.lower() != "asc"
+    # Build dicts
+    data = [
+        {
+            "code": r.code,
+            "name": r.name,
+            "sector": r.sector,
+            "is_syariah": r.is_syariah,
+            "score": float(r.score) if r.score is not None else None,
+            "recommendation": r.recommendation,
+            "last_price": float(r.last_price) if r.last_price is not None else None,
+            "change_pct": float(r.change_pct) if r.change_pct is not None else None,
+            "per": float(r.per) if r.per is not None else None,
+            "pbv": float(r.pbv) if r.pbv is not None else None,
+            "roe": float(r.roe) if r.roe is not None else None,
+            "dividend_yield": float(r.dividend_yield) if r.dividend_yield is not None else None,
+        }
+        for r in rows
+    ]
 
-    stocks = stocks_query.all()
-
-    # Build result rows by fetching latest data per stock
-    rows = []
-    for stock in stocks:
-        latest_score = (
-            db.query(StockScore)
-            .filter(StockScore.stock_id == stock.id)
-            .order_by(StockScore.calculated_at.desc())
-            .first()
-        )
-        latest_price = (
-            db.query(StockPrice)
-            .filter(StockPrice.stock_id == stock.id)
-            .order_by(StockPrice.recorded_at.desc())
-            .first()
-        )
-        latest_fund = (
-            db.query(FundamentalData)
-            .filter(FundamentalData.stock_id == stock.id)
-            .order_by(FundamentalData.period_year.desc())
-            .first()
-        )
-
-        score_val = float(latest_score.score) if latest_score and latest_score.score is not None else None
-        price_val = float(latest_price.price) if latest_price and latest_price.price is not None else None
-        change_pct = float(latest_price.change_pct) if latest_price and latest_price.change_pct is not None else None
-        per_val = float(latest_fund.per) if latest_fund and latest_fund.per is not None else None
-        pbv_val = float(latest_fund.pbv) if latest_fund and latest_fund.pbv is not None else None
-        roe_val = float(latest_fund.roe) if latest_fund and latest_fund.roe is not None else None
-        div_val = float(latest_fund.dividend_yield) if latest_fund and latest_fund.dividend_yield is not None else None
-
-        rows.append({
-            "code": stock.code,
-            "name": stock.name,
-            "sector": stock.sector,
-            "last_price": price_val,
-            "change_pct": change_pct,
-            "score": score_val,
-            "recommendation": latest_score.recommendation if latest_score else None,
-            "per": per_val,
-            "pbv": pbv_val,
-            "roe": roe_val,
-            "dividend_yield": div_val,
-            "is_syariah": stock.is_syariah,
-        })
-
-    # Sort
+    # Sort in Python
     sort_key_map = {
         "score": "score", "code": "code", "name": "name",
         "last_price": "last_price", "per": "per", "pbv": "pbv",
         "roe": "roe", "dividend_yield": "dividend_yield",
     }
     key = sort_key_map.get(sort_by, "score")
-    rows.sort(key=lambda r: (r[key] is None, r[key] if r[key] is not None else 0), reverse=reverse)
+    reverse = sort_order.lower() != "asc"
+    data.sort(key=lambda r: (r[key] is None, r[key] if r[key] is not None else 0), reverse=reverse)
 
-    # Paginate
+    total = len(data)
+    total_pages = math.ceil(total / per_page) if total > 0 else 1
     offset = (page - 1) * per_page
-    page_rows = rows[offset: offset + per_page]
-
-    items = [RankingItem(**r) for r in page_rows]
+    page_data = data[offset: offset + per_page]
 
     return RankingResponse(
-        data=items,
+        data=[RankingItem(**r) for r in page_data],
         total=total,
         page=page,
         per_page=per_page,
