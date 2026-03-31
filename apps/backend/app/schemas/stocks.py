@@ -195,3 +195,28 @@ class DividendStockItem(BaseModel):
 class DividendResponse(BaseModel):
     data: list[DividendStockItem]
     total: int
+
+
+# ---------------------------------------------------------------------------
+# Technical Analysis
+# ---------------------------------------------------------------------------
+
+
+class TechnicalDataItem(BaseModel):
+    date: date
+    open: float | None = None
+    high: float | None = None
+    low: float | None = None
+    close: float
+    volume: int | None = None
+    ma20: float | None = None
+    ma50: float | None = None
+    ma200: float | None = None
+    ema20: float | None = None
+    rsi: float | None = None
+    macd: float | None = None
+    macd_signal: float | None = None
+    macd_hist: float | None = None
+    bb_upper: float | None = None
+    bb_middle: float | None = None
+    bb_lower: float | None = None

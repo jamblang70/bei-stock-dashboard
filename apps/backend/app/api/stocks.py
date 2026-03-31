@@ -2,6 +2,8 @@
 
 import math
 
+import pandas as pd
+import ta
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -21,6 +23,7 @@ from app.schemas.stocks import (
     StockListResponse,
     StockProfile,
     StockSearchResult,
+    TechnicalDataItem,
     TodayResponse,
     TodayStockItem,
 )
@@ -494,3 +497,69 @@ def sector_comparison(code: str, response: Response, db: Session = Depends(get_d
             detail="Data perbandingan sektor tidak tersedia (sektor < 3 emiten atau data tidak ditemukan)",
         )
     return data
+
+
+# ---------------------------------------------------------------------------
+# GET /{code}/technical
+# ---------------------------------------------------------------------------
+
+
+@router.get("/{code}/technical", response_model=list[TechnicalDataItem])
+def get_technical(
+    code: str,
+    range: str = Query("3m", description="1w, 1m, 3m, 6m, 1y, 5y"),
+    db: Session = Depends(get_db),
+):
+    """Return OHLCV + technical indicators for the given range."""
+    history = get_price_history(db, code, range)
+    if not history:
+        return []
+
+    df = pd.DataFrame(history, columns=["date", "open", "high", "low", "close", "volume"])
+    close = df["close"].astype(float)
+
+    df["ma20"] = ta.trend.sma_indicator(close, window=20)
+    df["ma50"] = ta.trend.sma_indicator(close, window=50)
+    df["ma200"] = ta.trend.sma_indicator(close, window=200)
+    df["ema20"] = ta.trend.ema_indicator(close, window=20)
+    df["rsi"] = ta.momentum.rsi(close, window=14)
+    df["macd"] = ta.trend.macd(close)
+    df["macd_signal"] = ta.trend.macd_signal(close)
+    df["macd_hist"] = ta.trend.macd_diff(close)
+    df["bb_upper"] = ta.volatility.bollinger_hband(close)
+    df["bb_middle"] = ta.volatility.bollinger_mavg(close)
+    df["bb_lower"] = ta.volatility.bollinger_lband(close)
+
+    def _nan_to_none(val):
+        import math
+        if val is None:
+            return None
+        try:
+            return None if math.isnan(float(val)) else float(val)
+        except (TypeError, ValueError):
+            return None
+
+    result = []
+    for _, row in df.iterrows():
+        result.append(
+            TechnicalDataItem(
+                date=row["date"],
+                open=_nan_to_none(row["open"]),
+                high=_nan_to_none(row["high"]),
+                low=_nan_to_none(row["low"]),
+                close=float(row["close"]),
+                volume=int(row["volume"]) if row["volume"] is not None and not pd.isna(row["volume"]) else None,
+                ma20=_nan_to_none(row["ma20"]),
+                ma50=_nan_to_none(row["ma50"]),
+                ma200=_nan_to_none(row["ma200"]),
+                ema20=_nan_to_none(row["ema20"]),
+                rsi=_nan_to_none(row["rsi"]),
+                macd=_nan_to_none(row["macd"]),
+                macd_signal=_nan_to_none(row["macd_signal"]),
+                macd_hist=_nan_to_none(row["macd_hist"]),
+                bb_upper=_nan_to_none(row["bb_upper"]),
+                bb_middle=_nan_to_none(row["bb_middle"]),
+                bb_lower=_nan_to_none(row["bb_lower"]),
+            )
+        )
+    return result
