@@ -43,7 +43,7 @@ def check_data_sufficiency(db: Session, stock_id: int) -> tuple[bool, str | None
     if fund_count < 2:
         missing.append(f"data fundamental kurang (tersedia {fund_count} kuartal, dibutuhkan minimal 2)")
 
-    # Cek ≥ 30 hari price_history
+    # Cek ≥ 15 hari price_history (trading days in 30 calendar days)
     cutoff = datetime.now(tz=timezone.utc).date() - timedelta(days=30)
     price_count = db.execute(
         select(func.count()).select_from(PriceHistory).where(
@@ -52,7 +52,7 @@ def check_data_sufficiency(db: Session, stock_id: int) -> tuple[bool, str | None
         )
     ).scalar_one()
 
-    if price_count < 30:
+    if price_count < 15:
         missing.append(
             f"data harga historis kurang (tersedia {price_count} hari dalam 30 hari terakhir, dibutuhkan minimal 30)"
         )
