@@ -50,6 +50,11 @@ export default function MobileRankingCard({ item, rank }: Props) {
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <span className="font-bold text-emerald-400">{item.code}</span>
+              {item.is_syariah && (
+                <span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-400">
+                  Syariah
+                </span>
+              )}
               {item.sector && (
                 <span className="truncate text-[10px] text-text-muted">{item.sector}</span>
               )}

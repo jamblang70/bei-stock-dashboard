@@ -7,6 +7,7 @@ export interface Stock {
   sector: string | null;
   sub_sector: string | null;
   is_active: boolean;
+  is_syariah?: boolean;
 }
 
 export interface StockProfile extends Stock {
@@ -17,6 +18,7 @@ export interface StockProfile extends Stock {
   change_pct: number | null;
   volume: number | null;
   score: ScoreInfo | null;
+  is_syariah?: boolean;
 }
 
 // ─── Price History ────────────────────────────────────────────────────────────
@@ -117,6 +119,7 @@ export interface RankingItem {
   pbv: number | null;
   roe: number | null;
   dividend_yield: number | null;
+  is_syariah?: boolean;
 }
 
 // ─── AI Analysis ──────────────────────────────────────────────────────────────

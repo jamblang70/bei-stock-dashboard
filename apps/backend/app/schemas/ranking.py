@@ -15,6 +15,7 @@ class RankingItem(BaseModel):
     roe: float | None = None
     dividend_yield: float | None = None
     recommendation: str | None = None
+    is_syariah: bool | None = None
 
 
 class RankingResponse(BaseModel):

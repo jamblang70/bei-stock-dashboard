@@ -23,6 +23,7 @@ def _add_data_warning(response: Response, db: Session) -> None:
 def get_ranking(
     response: Response,
     sector: str | None = Query(None, description="Filter by sector"),
+    syariah: bool | None = Query(None, description="Filter syariah stocks only"),
     sort_by: str = Query("score", description="Sort field: score, code, name, last_price, per, pbv, roe, dividend_yield"),
     sort_order: str = Query("desc", description="asc or desc"),
     page: int = Query(1, ge=1),
@@ -36,6 +37,8 @@ def get_ranking(
     stocks_query = db.query(Stock).filter(Stock.is_active == True)  # noqa: E712
     if sector:
         stocks_query = stocks_query.filter(Stock.sector == sector)
+    if syariah:
+        stocks_query = stocks_query.filter(Stock.is_syariah == True)  # noqa: E712
 
     total = stocks_query.count()
     total_pages = math.ceil(total / per_page) if total > 0 else 1
@@ -87,6 +90,7 @@ def get_ranking(
             "pbv": pbv_val,
             "roe": roe_val,
             "dividend_yield": div_val,
+            "is_syariah": stock.is_syariah,
         })
 
     # Sort

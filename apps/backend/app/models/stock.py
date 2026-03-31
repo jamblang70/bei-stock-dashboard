@@ -33,6 +33,7 @@ class Stock(Base):
     description: Mapped[Optional[str]] = mapped_column(Text)
     listing_date: Mapped[Optional[date]] = mapped_column(Date)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    is_syariah: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

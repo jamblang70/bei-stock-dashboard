@@ -93,6 +93,7 @@ def get_stock_profile(db: Session, code: str) -> dict | None:
         "description": stock.description,
         "listing_date": stock.listing_date,
         "is_active": stock.is_active,
+        "is_syariah": stock.is_syariah,
     }
 
     if latest_price:

@@ -43,6 +43,11 @@ export default function StockHeader({ stock }: StockHeaderProps) {
                 {stock.sector}
               </span>
             )}
+            {stock.is_syariah && (
+              <span className="rounded-full border border-emerald-500/30 bg-emerald-500/15 px-3 py-1 text-xs font-medium text-emerald-400">
+                ☪ Syariah
+              </span>
+            )}
           </div>
           <h1 className="mt-2 text-xl font-semibold text-text-primary">{stock.name}</h1>
           {stock.sub_sector && (

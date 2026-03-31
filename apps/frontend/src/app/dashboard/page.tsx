@@ -6,6 +6,7 @@ import type { PaginatedResponse, RankingItem } from "@/types";
 import RankingTable from "@/components/ranking/RankingTable";
 import MobileRankingCard from "@/components/ranking/MobileRankingCard";
 import SectorFilter from "@/components/ranking/SectorFilter";
+import SyariahFilter from "@/components/ranking/SyariahFilter";
 import SearchBar from "@/components/search/SearchBar";
 import Spinner from "@/components/ui/Spinner";
 
@@ -16,6 +17,7 @@ export default function DashboardPage() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [sector, setSector] = useState("");
+  const [syariah, setSyariah] = useState(false);
   const [sortBy, setSortBy] = useState("score");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [loading, setLoading] = useState(true);
@@ -32,6 +34,7 @@ export default function DashboardPage() {
         sort_order: sortOrder,
       });
       if (sector) params.set("sector", sector);
+      if (syariah) params.set("syariah", "true");
       const res = await apiGet<PaginatedResponse<RankingItem>>(
         `/ranking/?${params.toString()}`
       );
@@ -45,7 +48,7 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, sector, sortBy, sortOrder]);
+  }, [page, sector, syariah, sortBy, sortOrder]);
 
   useEffect(() => { fetchRanking(); }, [fetchRanking]);
 
@@ -80,9 +83,15 @@ export default function DashboardPage() {
         {/* Filters */}
         <div className="mb-4 flex flex-wrap items-center gap-3">
           <SectorFilter value={sector} onChange={(v) => { setSector(v); setPage(1); }} />
+          <SyariahFilter value={syariah} onChange={(v) => { setSyariah(v); setPage(1); }} />
           {sector && (
             <button onClick={() => { setSector(""); setPage(1); }} className="text-xs text-emerald-400 hover:text-emerald-300">
               Reset
+            </button>
+          )}
+          {syariah && (
+            <button onClick={() => { setSyariah(false); setPage(1); }} className="text-xs text-emerald-400 hover:text-emerald-300">
+              Reset Syariah
             </button>
           )}
         </div>
