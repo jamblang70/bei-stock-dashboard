@@ -10,13 +10,13 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantClasses: Record<NonNullable<ButtonProps["variant"]>, string> = {
   primary:
-    "bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-50 focus-visible:ring-primary-500",
+    "bg-emerald-500 text-white hover:bg-emerald-600 disabled:opacity-50 focus-visible:ring-emerald-500",
   secondary:
-    "bg-gray-100 text-gray-900 hover:bg-gray-200 disabled:opacity-50 focus-visible:ring-gray-400",
+    "bg-dark-surface text-text-secondary border border-dark-border hover:bg-dark-hover hover:text-text-primary disabled:opacity-50 focus-visible:ring-dark-border",
   danger:
-    "bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 focus-visible:ring-red-500",
+    "bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 focus-visible:ring-red-500",
   ghost:
-    "bg-transparent text-gray-700 hover:bg-gray-100 disabled:opacity-50 focus-visible:ring-gray-400",
+    "bg-transparent text-text-secondary hover:bg-dark-hover hover:text-text-primary disabled:opacity-50 focus-visible:ring-dark-border",
 };
 
 const sizeClasses: Record<NonNullable<ButtonProps["size"]>, string> = {
@@ -41,7 +41,7 @@ export default function Button({
   ...props
 }: ButtonProps) {
   const base =
-    "inline-flex items-center justify-center font-medium rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2";
+    "inline-flex items-center justify-center font-medium rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-dark-bg";
 
   return (
     <button

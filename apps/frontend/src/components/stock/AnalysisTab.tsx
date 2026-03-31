@@ -18,12 +18,12 @@ interface MetricRowProps {
 function MetricRow({ label, value, note }: MetricRowProps) {
   return (
     <div className="flex items-center justify-between py-2 text-sm">
-      <span className="text-gray-600">{label}</span>
+      <span className="text-text-secondary">{label}</span>
       <div className="text-right">
-        <span className={`font-medium ${value === "N/A" ? "text-gray-400" : "text-gray-900"}`}>
+        <span className={`font-medium ${value === "N/A" ? "text-text-muted" : "text-text-primary"}`}>
           {value}
         </span>
-        {note && <p className="text-xs text-gray-400">{note}</p>}
+        {note && <p className="text-xs text-text-muted">{note}</p>}
       </div>
     </div>
   );
@@ -37,8 +37,8 @@ interface SectionProps {
 function Section({ title, children }: SectionProps) {
   return (
     <div>
-      <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-400">{title}</h3>
-      <div className="divide-y divide-gray-100 rounded-lg border border-gray-100 bg-gray-50 px-4">
+      <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-text-muted">{title}</h3>
+      <div className="divide-y divide-dark-border/50 rounded-lg border border-dark-border bg-dark-bg/50 px-4">
         {children}
       </div>
     </div>
@@ -49,8 +49,8 @@ export default function AnalysisTab({ fundamentals: f }: AnalysisTabProps) {
   const noHistorical = "Data historis tidak tersedia";
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-      <h2 className="mb-5 text-sm font-semibold uppercase tracking-wide text-gray-500">
+    <div className="rounded-xl border border-dark-border bg-dark-surface p-6">
+      <h2 className="mb-5 text-sm font-semibold uppercase tracking-wide text-text-secondary">
         Analisa Fundamental
       </h2>
 
@@ -92,7 +92,7 @@ export default function AnalysisTab({ fundamentals: f }: AnalysisTabProps) {
       </div>
 
       {!f && (
-        <p className="mt-4 text-center text-sm text-gray-400">
+        <p className="mt-4 text-center text-sm text-text-muted">
           Data fundamental tidak tersedia
         </p>
       )}

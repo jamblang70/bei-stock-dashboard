@@ -10,12 +10,12 @@ interface AIAnalysisTabProps {
 
 function RecommendationBadge({ rec }: { rec: string }) {
   const styles: Record<string, string> = {
-    "Beli Kuat": "bg-green-600 text-white",
-    Beli: "bg-green-100 text-green-800",
-    Tahan: "bg-yellow-100 text-yellow-800",
-    Jual: "bg-red-100 text-red-800",
+    "Beli Kuat": "bg-emerald-500 text-white",
+    Beli: "bg-emerald-500/20 text-emerald-400",
+    Tahan: "bg-yellow-500/20 text-yellow-400",
+    Jual: "bg-red-500/20 text-red-400",
   };
-  const cls = styles[rec] ?? "bg-gray-100 text-gray-600";
+  const cls = styles[rec] ?? "bg-gray-500/20 text-text-muted";
   return (
     <span className={`inline-block rounded-full px-3 py-1 text-sm font-semibold ${cls}`}>
       {rec}
@@ -27,10 +27,10 @@ function Section({ title, content }: { title: string; content: string | null | u
   if (!content) return null;
   return (
     <div>
-      <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-400">
+      <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-text-muted">
         {title}
       </h3>
-      <p className="rounded-lg border border-gray-100 bg-gray-50 px-4 py-3 text-sm text-gray-700 leading-relaxed">
+      <p className="rounded-lg border border-dark-border bg-dark-bg/50 px-4 py-3 text-sm text-text-secondary leading-relaxed">
         {content}
       </p>
     </div>
@@ -83,8 +83,8 @@ export default function AIAnalysisTab({ code }: AIAnalysisTabProps) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center rounded-xl border border-gray-200 bg-white p-10 shadow-sm">
-        <div className="flex flex-col items-center gap-3 text-gray-400">
+      <div className="flex items-center justify-center rounded-xl border border-dark-border bg-dark-surface p-10">
+        <div className="flex flex-col items-center gap-3 text-text-muted">
           <svg
             className="h-8 w-8 animate-spin"
             xmlns="http://www.w3.org/2000/svg"
@@ -112,32 +112,32 @@ export default function AIAnalysisTab({ code }: AIAnalysisTabProps) {
   }
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+    <div className="rounded-xl border border-dark-border bg-dark-surface p-6">
       <div className="mb-5 flex items-center justify-between">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-text-secondary">
           Analisa AI
         </h2>
         <button
           onClick={handleRefresh}
           disabled={refreshing}
-          className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+          className="rounded-lg border border-dark-border px-3 py-1.5 text-xs font-medium text-text-secondary hover:bg-dark-hover hover:text-text-primary disabled:opacity-50 transition-colors"
         >
           {refreshing ? "Memproses..." : "Perbarui Analisa"}
         </button>
       </div>
 
       {refreshMsg && (
-        <div className="mb-4 rounded-lg bg-blue-50 px-4 py-2 text-sm text-blue-700">
+        <div className="mb-4 rounded-lg bg-blue-500/10 border border-blue-500/20 px-4 py-2 text-sm text-blue-400">
           {refreshMsg}
         </div>
       )}
 
       {error && !analysis && (
-        <div className="rounded-lg bg-gray-50 px-4 py-6 text-center text-sm text-gray-500">
+        <div className="rounded-lg bg-dark-bg/50 px-4 py-6 text-center text-sm text-text-muted">
           <p>{error}</p>
           <button
             onClick={fetchAnalysis}
-            className="mt-3 text-xs text-blue-600 underline hover:text-blue-800"
+            className="mt-3 text-xs text-emerald-400 underline hover:text-emerald-300"
           >
             Coba lagi
           </button>
@@ -145,12 +145,12 @@ export default function AIAnalysisTab({ code }: AIAnalysisTabProps) {
       )}
 
       {analysis && !analysis.data_sufficiency && (
-        <div className="mb-4 rounded-lg border border-yellow-200 bg-yellow-50 px-4 py-4">
-          <p className="text-sm font-medium text-yellow-800">
+        <div className="mb-4 rounded-lg border border-yellow-500/20 bg-yellow-500/10 px-4 py-4">
+          <p className="text-sm font-medium text-yellow-400">
             Data tidak cukup untuk menghasilkan analisa AI yang akurat.
           </p>
           {analysis.missing_data_info && (
-            <p className="mt-1 text-xs text-yellow-700">{analysis.missing_data_info}</p>
+            <p className="mt-1 text-xs text-yellow-400/70">{analysis.missing_data_info}</p>
           )}
         </div>
       )}
@@ -160,7 +160,7 @@ export default function AIAnalysisTab({ code }: AIAnalysisTabProps) {
           {/* Rekomendasi + Ringkasan */}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
             <RecommendationBadge rec={analysis.recommendation} />
-            <p className="text-sm text-gray-700 leading-relaxed">{analysis.summary}</p>
+            <p className="text-sm text-text-secondary leading-relaxed">{analysis.summary}</p>
           </div>
 
           {/* Analisa detail */}
@@ -171,13 +171,13 @@ export default function AIAnalysisTab({ code }: AIAnalysisTabProps) {
           {/* Faktor pendukung */}
           {analysis.supporting_factors && analysis.supporting_factors.length > 0 && (
             <div>
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-muted">
                 Faktor Pendukung
               </h3>
               <ul className="space-y-1">
                 {analysis.supporting_factors.map((factor, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
-                    <span className="mt-0.5 text-green-500">✓</span>
+                  <li key={i} className="flex items-start gap-2 text-sm text-text-secondary">
+                    <span className="mt-0.5 text-emerald-400">✓</span>
                     <span>{factor}</span>
                   </li>
                 ))}
@@ -186,7 +186,7 @@ export default function AIAnalysisTab({ code }: AIAnalysisTabProps) {
           )}
 
           {/* Metadata */}
-          <div className="flex items-center justify-between text-[10px] text-gray-400">
+          <div className="flex items-center justify-between text-[10px] text-text-muted">
             <span>
               Dihasilkan:{" "}
               {new Date(analysis.generated_at).toLocaleString("id-ID", {
@@ -202,7 +202,7 @@ export default function AIAnalysisTab({ code }: AIAnalysisTabProps) {
       )}
 
       {/* Disclaimer */}
-      <p className="mt-5 text-[10px] leading-relaxed text-gray-400">
+      <p className="mt-5 text-[10px] leading-relaxed text-text-muted">
         * Analisa ini dihasilkan oleh AI dan bersifat informatif semata. Bukan merupakan
         rekomendasi investasi. Keputusan investasi sepenuhnya menjadi tanggung jawab investor.
       </p>

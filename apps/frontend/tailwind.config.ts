@@ -9,6 +9,13 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        dark: {
+          bg: "#0a0a0f",
+          surface: "#111827",
+          border: "#1f2937",
+          hover: "#1f2937",
+          card: "#0f1219",
+        },
         primary: {
           50: "#eff6ff",
           500: "#3b82f6",
@@ -18,6 +25,11 @@ const config: Config = {
         success: "#22c55e",
         danger: "#ef4444",
         warning: "#f59e0b",
+        text: {
+          primary: "#f9fafb",
+          secondary: "#9ca3af",
+          muted: "#6b7280",
+        },
       },
     },
   },

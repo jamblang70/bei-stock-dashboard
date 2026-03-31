@@ -18,11 +18,11 @@ interface MetricItemProps {
 function MetricItem({ label, value, description }: MetricItemProps) {
   return (
     <div className="flex flex-col gap-0.5">
-      <span className="text-xs text-gray-500">{label}</span>
-      <span className={`text-lg font-semibold ${value === "N/A" ? "text-gray-400" : "text-gray-900"}`}>
+      <span className="text-xs text-text-muted">{label}</span>
+      <span className={`text-lg font-semibold ${value === "N/A" ? "text-text-muted" : "text-text-primary"}`}>
         {value}
       </span>
-      {description && <span className="text-xs text-gray-400">{description}</span>}
+      {description && <span className="text-xs text-text-muted">{description}</span>}
     </div>
   );
 }
@@ -34,15 +34,21 @@ export default function MetricsCard({ fundamentals }: MetricsCardProps) {
   const divYield = fmt(fundamentals?.dividend_yield ?? null, 2, "%");
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-      <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-gray-500">
+    <div className="rounded-xl border border-dark-border bg-dark-surface p-6">
+      <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-text-secondary">
         Metrik Utama
       </h2>
       <div className="grid grid-cols-2 gap-6 sm:grid-cols-4">
         <MetricItem label="PER" value={per} description="Price to Earnings" />
-        <MetricItem label="PBV" value={pbv} description="Price to Book Value" />
-        <MetricItem label="ROE" value={roe} description="Return on Equity" />
-        <MetricItem label="Div. Yield" value={divYield} description="Dividend Yield" />
+        <div className="border-l border-dark-border pl-6">
+          <MetricItem label="PBV" value={pbv} description="Price to Book Value" />
+        </div>
+        <div className="border-l border-dark-border pl-6 max-sm:border-l-0 max-sm:pl-0">
+          <MetricItem label="ROE" value={roe} description="Return on Equity" />
+        </div>
+        <div className="border-l border-dark-border pl-6">
+          <MetricItem label="Div. Yield" value={divYield} description="Dividend Yield" />
+        </div>
       </div>
     </div>
   );

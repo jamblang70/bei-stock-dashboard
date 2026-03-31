@@ -1,15 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
+import { useEffect, useRef, useState, useCallback } from "react";
+import { createChart, ColorType, CrosshairMode } from "lightweight-charts";
+import type { IChartApi, ISeriesApi, CandlestickData, HistogramData, Time } from "lightweight-charts";
 import { apiGet } from "@/lib/api";
 import type { PriceHistory } from "@/types";
 
@@ -24,21 +17,6 @@ const RANGES: { label: string; value: Range }[] = [
   { label: "5T", value: "5y" },
 ];
 
-function formatDate(dateStr: string, range: Range): string {
-  const date = new Date(dateStr);
-  if (range === "1w" || range === "1m") {
-    return date.toLocaleDateString("id-ID", { day: "numeric", month: "short" });
-  }
-  if (range === "3m" || range === "6m") {
-    return date.toLocaleDateString("id-ID", { day: "numeric", month: "short" });
-  }
-  return date.toLocaleDateString("id-ID", { month: "short", year: "2-digit" });
-}
-
-function formatPrice(value: number): string {
-  return `Rp ${value.toLocaleString("id-ID")}`;
-}
-
 interface PriceChartProps {
   code: string;
 }
@@ -48,6 +26,11 @@ export default function PriceChart({ code }: PriceChartProps) {
   const [data, setData] = useState<PriceHistory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+
+  const chartContainerRef = useRef<HTMLDivElement>(null);
+  const chartRef = useRef<IChartApi | null>(null);
+  const candlestickSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
+  const volumeSeriesRef = useRef<ISeriesApi<"Histogram"> | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -73,27 +56,126 @@ export default function PriceChart({ code }: PriceChartProps) {
     };
   }, [code, range]);
 
-  const chartData = data.map((d) => ({
-    date: d.date,
-    close: d.close,
-    label: formatDate(d.date, range),
-  }));
+  const initChart = useCallback(() => {
+    if (!chartContainerRef.current) return;
 
-  const prices = chartData.map((d) => d.close);
-  const minPrice = prices.length ? Math.min(...prices) : 0;
-  const maxPrice = prices.length ? Math.max(...prices) : 0;
-  const isPositive =
-    chartData.length >= 2
-      ? chartData[chartData.length - 1].close >= chartData[0].close
-      : true;
+    // Clean up existing chart
+    if (chartRef.current) {
+      chartRef.current.remove();
+      chartRef.current = null;
+    }
 
-  const strokeColor = isPositive ? "#16a34a" : "#dc2626";
-  const fillColor = isPositive ? "#dcfce7" : "#fee2e2";
+    const container = chartContainerRef.current;
+
+    const chart = createChart(container, {
+      layout: {
+        background: { type: ColorType.Solid, color: "#0a0a0f" },
+        textColor: "#9ca3af",
+        fontSize: 11,
+      },
+      grid: {
+        vertLines: { color: "#1f2937" },
+        horzLines: { color: "#1f2937" },
+      },
+      crosshair: {
+        mode: CrosshairMode.Normal,
+        vertLine: { color: "#374151", width: 1, style: 3, labelBackgroundColor: "#1f2937" },
+        horzLine: { color: "#374151", width: 1, style: 3, labelBackgroundColor: "#1f2937" },
+      },
+      rightPriceScale: {
+        borderColor: "#1f2937",
+        scaleMargins: { top: 0.1, bottom: 0.25 },
+      },
+      timeScale: {
+        borderColor: "#1f2937",
+        timeVisible: false,
+      },
+      width: container.clientWidth,
+      height: container.clientHeight,
+    });
+
+    // Candlestick series
+    const candlestickSeries = chart.addCandlestickSeries({
+      upColor: "#22c55e",
+      downColor: "#ef4444",
+      borderUpColor: "#22c55e",
+      borderDownColor: "#ef4444",
+      wickUpColor: "#22c55e",
+      wickDownColor: "#ef4444",
+    });
+
+    // Volume histogram series
+    const volumeSeries = chart.addHistogramSeries({
+      color: "#22c55e",
+      priceFormat: { type: "volume" },
+      priceScaleId: "volume",
+    });
+
+    chart.priceScale("volume").applyOptions({
+      scaleMargins: { top: 0.8, bottom: 0 },
+    });
+
+    chartRef.current = chart;
+    candlestickSeriesRef.current = candlestickSeries;
+    volumeSeriesRef.current = volumeSeries;
+
+    // Handle resize
+    const handleResize = () => {
+      if (chartRef.current && chartContainerRef.current) {
+        chartRef.current.applyOptions({
+          width: chartContainerRef.current.clientWidth,
+        });
+      }
+    };
+
+    window.addEventListener("resize", handleResize);
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
+
+  // Initialize chart once
+  useEffect(() => {
+    if (!loading && !error && data.length > 0) {
+      const cleanup = initChart();
+      return () => {
+        cleanup?.();
+        if (chartRef.current) {
+          chartRef.current.remove();
+          chartRef.current = null;
+        }
+      };
+    }
+  }, [loading, error, data.length > 0, initChart]);
+
+  // Update data when it changes
+  useEffect(() => {
+    if (!candlestickSeriesRef.current || !volumeSeriesRef.current || data.length === 0) return;
+
+    const candlestickData: CandlestickData[] = data.map((d) => ({
+      time: d.date as Time,
+      open: d.open ?? d.close,
+      high: d.high ?? d.close,
+      low: d.low ?? d.close,
+      close: d.close,
+    }));
+
+    const volumeData: HistogramData[] = data.map((d) => ({
+      time: d.date as Time,
+      value: d.volume ?? 0,
+      color: d.close >= (d.open ?? d.close) ? "rgba(34, 197, 94, 0.4)" : "rgba(239, 68, 68, 0.4)",
+    }));
+
+    candlestickSeriesRef.current.setData(candlestickData);
+    volumeSeriesRef.current.setData(volumeData);
+    chartRef.current?.timeScale().fitContent();
+  }, [data]);
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+    <div className="rounded-xl border border-dark-border bg-dark-surface p-6">
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-text-secondary">
           Grafik Harga
         </h2>
         <div className="flex gap-1">
@@ -103,8 +185,8 @@ export default function PriceChart({ code }: PriceChartProps) {
               onClick={() => setRange(r.value)}
               className={`rounded px-3 py-1 text-xs font-medium transition-colors ${
                 range === r.value
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  ? "bg-emerald-500 text-white"
+                  : "bg-dark-bg text-text-secondary hover:bg-dark-hover hover:text-text-primary"
               }`}
             >
               {r.label}
@@ -113,60 +195,21 @@ export default function PriceChart({ code }: PriceChartProps) {
         </div>
       </div>
 
-      <div className="h-64">
+      <div className="h-[400px]">
         {loading ? (
           <div className="flex h-full items-center justify-center">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600" />
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-dark-border border-t-emerald-500" />
           </div>
         ) : error ? (
-          <div className="flex h-full items-center justify-center text-sm text-gray-400">
+          <div className="flex h-full items-center justify-center text-sm text-text-muted">
             Gagal memuat data harga
           </div>
-        ) : chartData.length === 0 ? (
-          <div className="flex h-full items-center justify-center text-sm text-gray-400">
+        ) : data.length === 0 ? (
+          <div className="flex h-full items-center justify-center text-sm text-text-muted">
             Data tidak tersedia
           </div>
         ) : (
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={chartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-              <defs>
-                <linearGradient id="priceGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={fillColor} stopOpacity={0.8} />
-                  <stop offset="95%" stopColor={fillColor} stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis
-                dataKey="label"
-                tick={{ fontSize: 11, fill: "#9ca3af" }}
-                tickLine={false}
-                axisLine={false}
-                interval="preserveStartEnd"
-              />
-              <YAxis
-                domain={[minPrice * 0.98, maxPrice * 1.02]}
-                tick={{ fontSize: 11, fill: "#9ca3af" }}
-                tickLine={false}
-                axisLine={false}
-                tickFormatter={(v: number) => `${(v / 1000).toFixed(0)}k`}
-                width={40}
-              />
-              <Tooltip
-                formatter={(value: number) => [formatPrice(value), "Harga"]}
-                labelFormatter={(label: string) => `Tanggal: ${label}`}
-                contentStyle={{ fontSize: 12, borderRadius: 8 }}
-              />
-              <Area
-                type="monotone"
-                dataKey="close"
-                stroke={strokeColor}
-                strokeWidth={2}
-                fill="url(#priceGradient)"
-                dot={false}
-                activeDot={{ r: 4 }}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
+          <div ref={chartContainerRef} className="h-full w-full" />
         )}
       </div>
     </div>

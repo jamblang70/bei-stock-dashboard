@@ -22,16 +22,16 @@ function formatNumber(val: number | null, decimals = 2): string {
 }
 
 function RecommendationBadge({ rec }: { rec: string | null | undefined }) {
-  if (!rec) return <span className="text-gray-400">-</span>;
+  if (!rec) return <span className="text-text-muted">-</span>;
   const colors: Record<string, string> = {
-    "Beli Kuat": "bg-green-100 text-green-800",
-    Beli: "bg-blue-100 text-blue-800",
-    Tahan: "bg-yellow-100 text-yellow-800",
-    Jual: "bg-red-100 text-red-800",
+    "Beli Kuat": "bg-emerald-500/20 text-emerald-400",
+    Beli: "bg-blue-500/20 text-blue-400",
+    Tahan: "bg-yellow-500/20 text-yellow-400",
+    Jual: "bg-red-500/20 text-red-400",
   };
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${colors[rec] ?? "bg-gray-100 text-gray-800"}`}
+      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${colors[rec] ?? "bg-gray-500/20 text-text-muted"}`}
     >
       {rec}
     </span>
@@ -79,10 +79,10 @@ export default function WatchlistTable({
   }
 
   return (
-    <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
+    <div className="overflow-hidden rounded-lg border border-dark-border bg-dark-surface">
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200 text-sm">
-          <thead className="bg-gray-50">
+        <table className="min-w-full divide-y divide-dark-border text-sm">
+          <thead className="bg-dark-bg/50">
             <tr>
               {[
                 "Kode",
@@ -97,14 +97,14 @@ export default function WatchlistTable({
                 <th
                   key={h}
                   scope="col"
-                  className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500"
+                  className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-secondary"
                 >
                   {h}
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100 bg-white">
+          <tbody className="divide-y divide-dark-border/50">
             {items.map((item) => {
               const code = item.code ?? item.stock?.code ?? "";
               const name = item.name ?? item.stock?.name ?? "";
@@ -115,31 +115,31 @@ export default function WatchlistTable({
               const rec = item.recommendation ?? (item.score as any)?.recommendation ?? null;
               const changeColor =
                 changePct === null
-                  ? "text-gray-500"
+                  ? "text-text-muted"
                   : changePct > 0
-                    ? "text-green-600"
+                    ? "text-emerald-400"
                     : changePct < 0
-                      ? "text-red-600"
-                      : "text-gray-500";
+                      ? "text-red-400"
+                      : "text-text-muted";
 
               return (
-                <tr key={code}>
+                <tr key={code} className="transition-colors hover:bg-dark-hover">
                   <td
-                    className="cursor-pointer px-4 py-3 font-semibold text-blue-700 hover:underline"
+                    className="cursor-pointer px-4 py-3 font-semibold text-emerald-400 hover:underline"
                     onClick={() => router.push(`/stock/${code}`)}
                   >
                     {code}
                   </td>
                   <td
-                    className="max-w-[180px] cursor-pointer truncate px-4 py-3 text-gray-900 hover:underline"
+                    className="max-w-[180px] cursor-pointer truncate px-4 py-3 text-text-primary hover:underline"
                     onClick={() => router.push(`/stock/${code}`)}
                   >
                     {name}
                   </td>
-                  <td className="px-4 py-3 text-gray-600">
+                  <td className="px-4 py-3 text-text-secondary">
                     {sector ?? "-"}
                   </td>
-                  <td className="px-4 py-3 text-right font-medium text-gray-900">
+                  <td className="px-4 py-3 text-right font-medium text-text-primary">
                     {formatPrice(price)}
                   </td>
                   <td className={`px-4 py-3 text-right font-medium ${changeColor}`}>
@@ -147,7 +147,7 @@ export default function WatchlistTable({
                       ? `${changePct > 0 ? "+" : ""}${formatNumber(changePct)}%`
                       : "-"}
                   </td>
-                  <td className="px-4 py-3 text-right font-semibold text-gray-900">
+                  <td className="px-4 py-3 text-right font-semibold text-text-primary">
                     {scoreVal !== null ? formatNumber(scoreVal, 1) : "-"}
                   </td>
                   <td className="px-4 py-3">
@@ -158,13 +158,13 @@ export default function WatchlistTable({
                       <button
                         onClick={() => handleDelete(code)}
                         disabled={deletingCodes.has(code)}
-                        className="rounded px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
+                        className="rounded px-2 py-1 text-xs font-medium text-red-400 hover:bg-red-500/10 disabled:opacity-50 transition-colors"
                         aria-label={`Hapus ${code} dari watchlist`}
                       >
                         {deletingCodes.has(code) ? "Menghapus..." : "Hapus"}
                       </button>
                       {errors[code] && (
-                        <span className="text-xs text-red-500">
+                        <span className="text-xs text-red-400">
                           {errors[code]}
                         </span>
                       )}

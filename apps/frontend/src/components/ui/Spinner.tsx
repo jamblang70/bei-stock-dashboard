@@ -12,7 +12,7 @@ const sizeClasses: Record<NonNullable<SpinnerProps["size"]>, string> = {
 export default function Spinner({ size = "md", className = "" }: SpinnerProps) {
   return (
     <div
-      className={`animate-spin rounded-full border-gray-300 border-t-primary-600 ${sizeClasses[size]} ${className}`}
+      className={`animate-spin rounded-full border-dark-border border-t-emerald-500 ${sizeClasses[size]} ${className}`}
       role="status"
       aria-label="Memuat..."
     />

@@ -57,13 +57,13 @@ export default async function StockProfilePage({ params }: PageProps) {
   if (!stock) notFound();
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-dark-bg">
       {/* Navbar */}
-      <header className="border-b border-gray-200 bg-white shadow-sm">
+      <header className="border-b border-dark-border bg-dark-surface">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3 sm:px-6">
           <Link
             href="/dashboard"
-            className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors"
+            className="flex items-center gap-2 text-sm font-medium text-text-secondary hover:text-emerald-400 transition-colors"
           >
             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />

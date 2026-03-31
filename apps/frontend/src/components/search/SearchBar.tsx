@@ -51,7 +51,7 @@ export default function SearchBar() {
     <div ref={containerRef} className="relative w-full max-w-md">
       <div className="relative">
         <svg
-          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
+          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -73,11 +73,11 @@ export default function SearchBar() {
           aria-label="Cari saham"
           aria-autocomplete="list"
           aria-expanded={open}
-          className="w-full rounded-lg border border-gray-300 bg-white py-2 pl-10 pr-4 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="w-full rounded-lg border border-dark-border bg-dark-bg py-2 pl-10 pr-4 text-sm text-text-primary placeholder-text-muted focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 transition-colors"
         />
         {loading && (
           <div className="absolute right-3 top-1/2 -translate-y-1/2">
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600" />
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-dark-border border-t-emerald-500" />
           </div>
         )}
       </div>

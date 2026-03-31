@@ -23,7 +23,7 @@ export default function SectorFilter({ value, onChange }: SectorFilterProps) {
     <div className="flex items-center gap-2">
       <label
         htmlFor="sector-filter"
-        className="text-sm font-medium text-gray-700"
+        className="text-sm font-medium text-text-secondary"
       >
         Sektor
       </label>
@@ -32,7 +32,7 @@ export default function SectorFilter({ value, onChange }: SectorFilterProps) {
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={loading}
-        className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
+        className="rounded-md border border-dark-border bg-dark-surface px-3 py-2 text-sm text-text-primary focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 disabled:opacity-50 transition-colors"
       >
         <option value="">Semua Sektor</option>
         {sectors.map((s) => (

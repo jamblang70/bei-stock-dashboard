@@ -68,15 +68,15 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-dark-bg">
       {/* Header */}
-      <header className="border-b border-gray-200 bg-white shadow-sm">
+      <header className="border-b border-dark-border bg-dark-surface">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
           <div>
-            <h1 className="text-xl font-bold text-gray-900">
+            <h1 className="text-xl font-bold text-text-primary">
               BEI Stock Dashboard
             </h1>
-            <p className="text-sm text-gray-500">Ranking Saham Terbaik</p>
+            <p className="text-sm text-text-secondary">Ranking Saham Terbaik</p>
           </div>
           <SearchBar />
         </div>
@@ -90,7 +90,7 @@ export default function DashboardPage() {
           {sector && (
             <button
               onClick={() => handleSectorChange("")}
-              className="text-sm text-blue-600 hover:underline"
+              className="text-sm text-emerald-400 hover:text-emerald-300 transition-colors"
             >
               Reset filter
             </button>
@@ -99,7 +99,7 @@ export default function DashboardPage() {
 
         {/* Error */}
         {error && (
-          <div className="mb-4 rounded-md bg-red-50 p-4 text-sm text-red-700">
+          <div className="mb-4 rounded-md bg-red-500/10 border border-red-500/20 p-4 text-sm text-red-400">
             {error}
           </div>
         )}

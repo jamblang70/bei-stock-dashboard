@@ -41,17 +41,31 @@ function formatPrice(val: number | null): string {
   return new Intl.NumberFormat("id-ID").format(val);
 }
 
+function ScoreBadge({ score }: { score: number | null }) {
+  if (score === null || score === undefined) return <span className="text-text-muted">-</span>;
+  const s = Number(score);
+  let bg = "bg-red-500/20 text-red-400";
+  if (s >= 80) bg = "bg-emerald-500/20 text-emerald-400";
+  else if (s >= 60) bg = "bg-blue-500/20 text-blue-400";
+  else if (s >= 40) bg = "bg-yellow-500/20 text-yellow-400";
+  return (
+    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${bg}`}>
+      {s.toFixed(1)}
+    </span>
+  );
+}
+
 function RecommendationBadge({ rec }: { rec: string | null }) {
-  if (!rec) return <span className="text-gray-400">-</span>;
+  if (!rec) return <span className="text-text-muted">-</span>;
   const colors: Record<string, string> = {
-    "Beli Kuat": "bg-green-100 text-green-800",
-    Beli: "bg-blue-100 text-blue-800",
-    Tahan: "bg-yellow-100 text-yellow-800",
-    Jual: "bg-red-100 text-red-800",
+    "Beli Kuat": "bg-emerald-500/20 text-emerald-400",
+    Beli: "bg-blue-500/20 text-blue-400",
+    Tahan: "bg-yellow-500/20 text-yellow-400",
+    Jual: "bg-red-500/20 text-red-400",
   };
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${colors[rec] ?? "bg-gray-100 text-gray-800"}`}
+      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${colors[rec] ?? "bg-gray-500/20 text-gray-400"}`}
     >
       {rec}
     </span>
@@ -74,28 +88,28 @@ export default function RankingTable({
 
   function SortIcon({ col }: { col: string }) {
     if (sortBy !== col) {
-      return <span className="ml-1 text-gray-300">↕</span>;
+      return <span className="ml-1 text-text-muted">↕</span>;
     }
     return (
-      <span className="ml-1 text-blue-600">
+      <span className="ml-1 text-emerald-400">
         {sortOrder === "asc" ? "↑" : "↓"}
       </span>
     );
   }
 
   return (
-    <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
+    <div className="overflow-hidden rounded-lg border border-dark-border bg-dark-surface">
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200 text-sm">
-          <thead className="bg-gray-50">
+        <table className="min-w-full divide-y divide-dark-border text-sm">
+          <thead className="bg-dark-bg/50">
             <tr>
               {COLUMNS.map((col) => (
                 <th
                   key={col.key}
                   scope="col"
-                  className={`px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 ${
+                  className={`px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-text-secondary ${
                     col.sortable
-                      ? "cursor-pointer select-none hover:bg-gray-100"
+                      ? "cursor-pointer select-none hover:text-text-primary transition-colors"
                       : ""
                   }`}
                   onClick={col.sortable ? () => onSort(col.key) : undefined}
@@ -106,12 +120,12 @@ export default function RankingTable({
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100 bg-white">
+          <tbody className="divide-y divide-dark-border/50">
             {data.length === 0 ? (
               <tr>
                 <td
                   colSpan={COLUMNS.length}
-                  className="py-10 text-center text-gray-400"
+                  className="py-10 text-center text-text-muted"
                 >
                   Tidak ada data
                 </td>
@@ -121,32 +135,32 @@ export default function RankingTable({
                 const changePct = item.change_pct;
                 const changeColor =
                   changePct === null
-                    ? "text-gray-500"
+                    ? "text-text-muted"
                     : changePct > 0
-                      ? "text-green-600"
+                      ? "text-emerald-400"
                       : changePct < 0
-                        ? "text-red-600"
-                        : "text-gray-500";
+                        ? "text-red-400"
+                        : "text-text-muted";
 
                 return (
                   <tr
                     key={item.code}
-                    className="cursor-pointer transition-colors hover:bg-blue-50"
+                    className="cursor-pointer transition-colors hover:bg-dark-hover"
                     onClick={() => router.push(`/stock/${item.code}`)}
                   >
-                    <td className="px-4 py-3 text-gray-400">
+                    <td className="px-4 py-3 text-text-muted">
                       {startNo + idx}
                     </td>
-                    <td className="px-4 py-3 font-semibold text-blue-700">
+                    <td className="px-4 py-3 font-semibold text-emerald-400">
                       {item.code}
                     </td>
-                    <td className="max-w-[180px] truncate px-4 py-3 text-gray-900">
+                    <td className="max-w-[180px] truncate px-4 py-3 text-text-primary">
                       {item.name}
                     </td>
-                    <td className="px-4 py-3 text-gray-600">
+                    <td className="px-4 py-3 text-text-secondary">
                       {item.sector ?? "-"}
                     </td>
-                    <td className="px-4 py-3 text-right font-medium text-gray-900">
+                    <td className="px-4 py-3 text-right font-medium text-text-primary">
                       {formatPrice(item.last_price)}
                     </td>
                     <td className={`px-4 py-3 text-right font-medium ${changeColor}`}>
@@ -154,22 +168,22 @@ export default function RankingTable({
                         ? `${changePct > 0 ? "+" : ""}${formatNumber(changePct)}%`
                         : "-"}
                     </td>
-                    <td className="px-4 py-3 text-right font-semibold text-gray-900">
-                      {formatNumber(item.score, 1)}
+                    <td className="px-4 py-3 text-right">
+                      <ScoreBadge score={item.score} />
                     </td>
                     <td className="px-4 py-3">
                       <RecommendationBadge rec={item.recommendation} />
                     </td>
-                    <td className="px-4 py-3 text-right text-gray-600">
+                    <td className="px-4 py-3 text-right text-text-secondary">
                       {formatNumber(item.per)}
                     </td>
-                    <td className="px-4 py-3 text-right text-gray-600">
+                    <td className="px-4 py-3 text-right text-text-secondary">
                       {formatNumber(item.pbv)}
                     </td>
-                    <td className="px-4 py-3 text-right text-gray-600">
+                    <td className="px-4 py-3 text-right text-text-secondary">
                       {item.roe !== null ? `${formatNumber(item.roe)}%` : "-"}
                     </td>
-                    <td className="px-4 py-3 text-right text-gray-600">
+                    <td className="px-4 py-3 text-right text-text-secondary">
                       {item.dividend_yield !== null
                         ? `${formatNumber(item.dividend_yield)}%`
                         : "-"}
@@ -183,8 +197,8 @@ export default function RankingTable({
       </div>
 
       {/* Pagination */}
-      <div className="flex items-center justify-between border-t border-gray-200 bg-gray-50 px-4 py-3">
-        <p className="text-sm text-gray-500">
+      <div className="flex items-center justify-between border-t border-dark-border bg-dark-bg/50 px-4 py-3">
+        <p className="text-sm text-text-secondary">
           {total > 0
             ? `Menampilkan ${startNo}–${Math.min(startNo + perPage - 1, total)} dari ${total} saham`
             : "Tidak ada data"}
@@ -193,17 +207,17 @@ export default function RankingTable({
           <button
             onClick={() => onPageChange(page - 1)}
             disabled={page <= 1}
-            className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded-md border border-dark-border bg-dark-surface px-3 py-1.5 text-sm font-medium text-text-secondary hover:bg-dark-hover hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-40 transition-colors"
           >
             ← Prev
           </button>
-          <span className="text-sm text-gray-600">
+          <span className="text-sm text-text-secondary">
             {page} / {totalPages || 1}
           </span>
           <button
             onClick={() => onPageChange(page + 1)}
             disabled={page >= totalPages}
-            className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded-md border border-dark-border bg-dark-surface px-3 py-1.5 text-sm font-medium text-text-secondary hover:bg-dark-hover hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-40 transition-colors"
           >
             Next →
           </button>

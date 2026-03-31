@@ -9,9 +9,9 @@ interface BannerProps {
 }
 
 const typeClasses: Record<BannerType, string> = {
-  warning: "bg-yellow-50 border-yellow-400 text-yellow-800",
-  error: "bg-red-50 border-red-400 text-red-800",
-  info: "bg-blue-50 border-blue-400 text-blue-800",
+  warning: "bg-yellow-500/10 border-yellow-500/50 text-yellow-400",
+  error: "bg-red-500/10 border-red-500/50 text-red-400",
+  info: "bg-blue-500/10 border-blue-500/50 text-blue-400",
 };
 
 const icons: Record<BannerType, string> = {

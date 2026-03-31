@@ -26,33 +26,33 @@ export default function StockHeader({ stock }: StockHeaderProps) {
   const volume = priceData?.volume ?? stock.volume ?? null;
 
   const isPositive = (changeNominal ?? 0) >= 0;
-  const changeColor = isPositive ? "text-green-600" : "text-red-600";
-  const changeBg = isPositive ? "bg-green-50" : "bg-red-50";
+  const changeColor = isPositive ? "text-emerald-400" : "text-red-400";
+  const changeBg = isPositive ? "bg-emerald-500/10 border-emerald-500/20" : "bg-red-500/10 border-red-500/20";
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+    <div className="rounded-xl border border-dark-border bg-dark-surface p-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         {/* Left: identity */}
         <div>
           <div className="flex items-center gap-3">
-            <span className="rounded-lg bg-blue-600 px-3 py-1 text-lg font-bold text-white">
+            <span className="rounded-lg bg-emerald-500 px-3 py-1 text-lg font-bold text-white">
               {stock.code}
             </span>
             {stock.sector && (
-              <span className="rounded-full bg-gray-100 px-3 py-1 text-xs text-gray-600">
+              <span className="rounded-full border border-dark-border bg-dark-bg px-3 py-1 text-xs text-text-secondary">
                 {stock.sector}
               </span>
             )}
           </div>
-          <h1 className="mt-2 text-xl font-semibold text-gray-900">{stock.name}</h1>
+          <h1 className="mt-2 text-xl font-semibold text-text-primary">{stock.name}</h1>
           {stock.sub_sector && (
-            <p className="mt-0.5 text-sm text-gray-500">{stock.sub_sector}</p>
+            <p className="mt-0.5 text-sm text-text-muted">{stock.sub_sector}</p>
           )}
         </div>
 
         {/* Right: price */}
-        <div className={`rounded-xl px-5 py-3 text-right ${changeBg}`}>
-          <p className="text-3xl font-bold text-gray-900">
+        <div className={`rounded-xl border px-5 py-3 text-right ${changeBg}`}>
+          <p className="text-3xl font-bold text-text-primary">
             Rp {formatNumber(lastPrice, 0)}
           </p>
           <div className={`mt-1 flex items-center justify-end gap-2 text-sm font-medium ${changeColor}`}>
@@ -65,7 +65,7 @@ export default function StockHeader({ stock }: StockHeaderProps) {
               {changePct !== null && changePct !== undefined ? Number(changePct).toFixed(2) : "N/A"}%)
             </span>
           </div>
-          <p className="mt-1 text-xs text-gray-500">
+          <p className="mt-1 text-xs text-text-muted">
             Vol: {formatVolume(volume)}
           </p>
         </div>

@@ -45,7 +45,7 @@ export default function WatchlistPage() {
 
   if (status === "loading" || (status === "authenticated" && loading)) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+      <div className="flex min-h-screen items-center justify-center bg-dark-bg">
         <Spinner size="lg" />
       </div>
     );
@@ -56,11 +56,11 @@ export default function WatchlistPage() {
   const token = (session as any)?.access_token as string;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="border-b border-gray-200 bg-white shadow-sm">
+    <div className="min-h-screen bg-dark-bg">
+      <header className="border-b border-dark-border bg-dark-surface">
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
-          <h1 className="text-xl font-bold text-gray-900">Watchlist Saya</h1>
-          <p className="text-sm text-gray-500">
+          <h1 className="text-xl font-bold text-text-primary">Watchlist Saya</h1>
+          <p className="text-sm text-text-secondary">
             Pantau saham pilihan Anda
           </p>
         </div>
@@ -68,22 +68,22 @@ export default function WatchlistPage() {
 
       <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         {error && (
-          <div className="mb-4 rounded-md bg-red-50 p-4 text-sm text-red-700">
+          <div className="mb-4 rounded-md bg-red-500/10 border border-red-500/20 p-4 text-sm text-red-400">
             {error}
           </div>
         )}
 
         {!loading && items.length === 0 && !error ? (
-          <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-gray-300 bg-white py-20 text-center">
-            <p className="text-lg font-medium text-gray-500">
+          <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-dark-border bg-dark-surface py-20 text-center">
+            <p className="text-lg font-medium text-text-secondary">
               Watchlist kosong
             </p>
-            <p className="mt-1 text-sm text-gray-400">
+            <p className="mt-1 text-sm text-text-muted">
               Tambahkan saham dari halaman profil emiten
             </p>
             <button
               onClick={() => router.push("/dashboard")}
-              className="mt-4 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              className="mt-4 rounded-md bg-emerald-500 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-600 transition-colors"
             >
               Lihat Ranking Saham
             </button>
