@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { apiGet } from "@/lib/api";
 import type { PaginatedResponse, RankingItem } from "@/types";
 import RankingTable from "@/components/ranking/RankingTable";
+import MobileRankingCard from "@/components/ranking/MobileRankingCard";
 import SectorFilter from "@/components/ranking/SectorFilter";
 import SearchBar from "@/components/search/SearchBar";
 import Spinner from "@/components/ui/Spinner";
@@ -31,16 +32,14 @@ export default function DashboardPage() {
         sort_order: sortOrder,
       });
       if (sector) params.set("sector", sector);
-
       const res = await apiGet<PaginatedResponse<RankingItem>>(
         `/ranking/?${params.toString()}`
       );
-      console.log("Ranking response:", res);
       setData(res.data ?? res.items ?? []);
       setTotal(res.total ?? 0);
     } catch (err) {
       console.error("Ranking fetch error:", err);
-      setError("Gagal memuat data ranking. Silakan coba lagi.");
+      setError("Gagal memuat data ranking.");
       setData([]);
       setTotal(0);
     } finally {
@@ -48,78 +47,91 @@ export default function DashboardPage() {
     }
   }, [page, sector, sortBy, sortOrder]);
 
-  useEffect(() => {
-    fetchRanking();
-  }, [fetchRanking]);
+  useEffect(() => { fetchRanking(); }, [fetchRanking]);
 
   function handleSort(col: string) {
-    if (sortBy === col) {
-      setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
-    } else {
-      setSortBy(col);
-      setSortOrder("desc");
-    }
+    if (sortBy === col) setSortOrder((p) => (p === "asc" ? "desc" : "asc"));
+    else { setSortBy(col); setSortOrder("desc"); }
     setPage(1);
   }
 
-  function handleSectorChange(val: string) {
-    setSector(val);
-    setPage(1);
-  }
+  const totalPages = Math.ceil(total / PER_PAGE);
 
   return (
     <div className="min-h-screen bg-dark-bg">
       {/* Header */}
-      <header className="border-b border-dark-border bg-dark-surface">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
-          <div>
-            <h1 className="text-xl font-bold text-text-primary">
-              BEI Stock Dashboard
-            </h1>
-            <p className="text-sm text-text-secondary">Ranking Saham Terbaik</p>
+      <header className="sticky top-0 z-30 border-b border-dark-border bg-dark-surface/95 backdrop-blur-sm">
+        <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-lg font-bold text-text-primary sm:text-xl">
+                  BEI Stock Dashboard
+                </h1>
+                <p className="text-xs text-text-secondary sm:text-sm">Ranking Saham Terbaik</p>
+              </div>
+            </div>
+            <SearchBar />
           </div>
-          <SearchBar />
         </div>
       </header>
 
-      {/* Main content */}
-      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+      <main className="mx-auto max-w-7xl px-4 py-4 sm:px-6 sm:py-6 lg:px-8">
         {/* Filters */}
-        <div className="mb-4 flex flex-wrap items-center gap-4">
-          <SectorFilter value={sector} onChange={handleSectorChange} />
+        <div className="mb-4 flex flex-wrap items-center gap-3">
+          <SectorFilter value={sector} onChange={(v) => { setSector(v); setPage(1); }} />
           {sector && (
-            <button
-              onClick={() => handleSectorChange("")}
-              className="text-sm text-emerald-400 hover:text-emerald-300 transition-colors"
-            >
-              Reset filter
+            <button onClick={() => { setSector(""); setPage(1); }} className="text-xs text-emerald-400 hover:text-emerald-300">
+              Reset
             </button>
           )}
         </div>
 
-        {/* Error */}
         {error && (
-          <div className="mb-4 rounded-md bg-red-500/10 border border-red-500/20 p-4 text-sm text-red-400">
+          <div className="mb-4 rounded-lg bg-red-500/10 border border-red-500/20 p-3 text-sm text-red-400">
             {error}
           </div>
         )}
 
-        {/* Table */}
         {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <Spinner size="lg" />
-          </div>
+          <div className="flex items-center justify-center py-20"><Spinner size="lg" /></div>
         ) : (
-          <RankingTable
-            data={data}
-            total={total}
-            page={page}
-            perPage={PER_PAGE}
-            onPageChange={setPage}
-            onSort={handleSort}
-            sortBy={sortBy}
-            sortOrder={sortOrder}
-          />
+          <>
+            {/* Desktop table */}
+            <div className="hidden md:block">
+              <RankingTable data={data} total={total} page={page} perPage={PER_PAGE}
+                onPageChange={setPage} onSort={handleSort} sortBy={sortBy} sortOrder={sortOrder} />
+            </div>
+
+            {/* Mobile cards */}
+            <div className="md:hidden space-y-3">
+              {data.length === 0 ? (
+                <p className="py-10 text-center text-text-muted">Tidak ada data</p>
+              ) : (
+                data.map((item, idx) => (
+                  <MobileRankingCard key={item.code} item={item} rank={(page - 1) * PER_PAGE + idx + 1} />
+                ))
+              )}
+            </div>
+
+            {/* Pagination */}
+            <div className="mt-4 flex items-center justify-between">
+              <p className="text-xs text-text-secondary sm:text-sm">
+                {total > 0 ? `${(page-1)*PER_PAGE+1}–${Math.min(page*PER_PAGE, total)} dari ${total}` : ""}
+              </p>
+              <div className="flex items-center gap-2">
+                <button onClick={() => setPage(page - 1)} disabled={page <= 1}
+                  className="rounded-lg border border-dark-border bg-dark-surface px-3 py-1.5 text-xs font-medium text-text-secondary hover:bg-dark-hover disabled:opacity-40 transition-colors">
+                  ←
+                </button>
+                <span className="text-xs text-text-secondary">{page}/{totalPages || 1}</span>
+                <button onClick={() => setPage(page + 1)} disabled={page >= totalPages}
+                  className="rounded-lg border border-dark-border bg-dark-surface px-3 py-1.5 text-xs font-medium text-text-secondary hover:bg-dark-hover disabled:opacity-40 transition-colors">
+                  →
+                </button>
+              </div>
+            </div>
+          </>
         )}
       </main>
     </div>
