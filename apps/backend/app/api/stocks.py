@@ -11,6 +11,8 @@ from app.models.stock import FundamentalData, Stock, StockPrice, StockScore
 from app.schemas.stocks import (
     CompareResponse,
     CompareStockItem,
+    DividendResponse,
+    DividendStockItem,
     FundamentalsResponse,
     PriceHistoryItem,
     ScoreInfo,
@@ -267,6 +269,119 @@ def compare_stocks(
         )
 
     return CompareResponse(stocks=items)
+
+
+# ---------------------------------------------------------------------------
+# GET /dividends  — must be defined BEFORE /{code} to avoid route conflict
+# ---------------------------------------------------------------------------
+
+
+@router.get("/dividends", response_model=DividendResponse)
+def dividend_stocks(
+    response: Response,
+    syariah: bool | None = Query(None, description="Filter syariah only"),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(25, ge=1, le=100),
+    db: Session = Depends(get_db),
+):
+    """Return top dividend-paying stocks sorted by dividend_yield DESC."""
+    _add_data_warning(response, db)
+
+    # Subquery: latest fundamental_data per stock (highest period_year)
+    latest_fund_sub = (
+        db.query(
+            FundamentalData.stock_id,
+            func.max(FundamentalData.period_year).label("max_year"),
+        )
+        .group_by(FundamentalData.stock_id)
+        .subquery()
+    )
+
+    # Subquery: latest stock_prices per stock
+    latest_price_sub = (
+        db.query(
+            StockPrice.stock_id,
+            func.max(StockPrice.recorded_at).label("max_recorded"),
+        )
+        .group_by(StockPrice.stock_id)
+        .subquery()
+    )
+
+    # Subquery: latest stock_scores per stock
+    latest_score_sub = (
+        db.query(
+            StockScore.stock_id,
+            func.max(StockScore.calculated_at).label("max_calc"),
+        )
+        .group_by(StockScore.stock_id)
+        .subquery()
+    )
+
+    query = (
+        db.query(Stock, FundamentalData, StockPrice, StockScore)
+        .join(
+            latest_fund_sub,
+            Stock.id == latest_fund_sub.c.stock_id,
+        )
+        .join(
+            FundamentalData,
+            (FundamentalData.stock_id == Stock.id)
+            & (FundamentalData.period_year == latest_fund_sub.c.max_year),
+        )
+        .outerjoin(
+            latest_price_sub,
+            Stock.id == latest_price_sub.c.stock_id,
+        )
+        .outerjoin(
+            StockPrice,
+            (StockPrice.stock_id == Stock.id)
+            & (StockPrice.recorded_at == latest_price_sub.c.max_recorded),
+        )
+        .outerjoin(
+            latest_score_sub,
+            Stock.id == latest_score_sub.c.stock_id,
+        )
+        .outerjoin(
+            StockScore,
+            (StockScore.stock_id == Stock.id)
+            & (StockScore.calculated_at == latest_score_sub.c.max_calc),
+        )
+        .filter(
+            Stock.is_active == True,  # noqa: E712
+            FundamentalData.dividend_yield.isnot(None),
+            FundamentalData.dividend_yield > 0,
+        )
+    )
+
+    if syariah is True:
+        query = query.filter(Stock.is_syariah == True)  # noqa: E712
+
+    query = query.order_by(FundamentalData.dividend_yield.desc())
+
+    total = query.count()
+    offset = (page - 1) * per_page
+    rows = query.offset(offset).limit(per_page).all()
+
+    items: list[DividendStockItem] = []
+    for stock, fund, price, score_obj in rows:
+        div_yield = float(fund.dividend_yield) if fund.dividend_yield is not None else None
+        div_per_share = float(fund.dividend_per_share) if fund.dividend_per_share is not None else None
+        items.append(
+            DividendStockItem(
+                code=stock.code,
+                name=stock.name,
+                sector=stock.sector,
+                last_price=float(price.price) if price and price.price is not None else None,
+                dividend_yield=div_yield,
+                dividend_per_share=div_per_share,
+                annual_dividend_estimate=div_per_share,
+                per=float(fund.per) if fund.per is not None else None,
+                score=float(score_obj.score) if score_obj and score_obj.score is not None else None,
+                is_syariah=stock.is_syariah,
+            )
+        )
+
+    return DividendResponse(data=items, total=total)
 
 
 # ---------------------------------------------------------------------------

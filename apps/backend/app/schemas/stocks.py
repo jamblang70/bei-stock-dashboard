@@ -172,3 +172,26 @@ class CompareStockItem(BaseModel):
 
 class CompareResponse(BaseModel):
     stocks: list[CompareStockItem]
+
+
+# ---------------------------------------------------------------------------
+# Dividend Tracker
+# ---------------------------------------------------------------------------
+
+
+class DividendStockItem(BaseModel):
+    code: str
+    name: str
+    sector: str | None = None
+    last_price: float | None = None
+    dividend_yield: float | None = None
+    dividend_per_share: float | None = None
+    annual_dividend_estimate: float | None = None
+    per: float | None = None
+    score: float | None = None
+    is_syariah: bool = False
+
+
+class DividendResponse(BaseModel):
+    data: list[DividendStockItem]
+    total: int

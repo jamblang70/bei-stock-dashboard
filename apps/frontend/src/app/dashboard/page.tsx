@@ -82,6 +82,9 @@ export default function DashboardPage() {
                 <Link href="/compare" className="text-text-secondary hover:text-emerald-400 transition-colors">
                   Bandingkan
                 </Link>
+                <Link href="/dividends" className="text-text-secondary hover:text-emerald-400 transition-colors">
+                  Dividen
+                </Link>
               </nav>
             </div>
             <SearchBar />

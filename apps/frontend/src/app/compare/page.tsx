@@ -214,6 +214,9 @@ export default function ComparePage() {
                 Saham Hari Ini
               </Link>
               <span className="text-emerald-400 font-medium">Bandingkan</span>
+              <Link href="/dividends" className="text-text-secondary hover:text-emerald-400 transition-colors">
+                Dividen
+              </Link>
             </nav>
           </div>
         </div>
