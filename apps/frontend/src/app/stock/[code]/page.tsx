@@ -5,6 +5,7 @@ import MetricsCard from "@/components/stock/MetricsCard";
 import PriceChart from "@/components/stock/PriceChart";
 import ScoreCard from "@/components/stock/ScoreCard";
 import AnalysisTab from "@/components/stock/AnalysisTab";
+import AIAnalysisTab from "@/components/stock/AIAnalysisTab";
 import SectorComparison from "@/components/stock/SectorComparison";
 import AddToWatchlistButton from "@/components/watchlist/AddToWatchlistButton";
 import type { StockProfile, FundamentalsData, SectorComparison as SectorComparisonType } from "@/types";
@@ -92,6 +93,9 @@ export default async function StockProfilePage({ params }: PageProps) {
         <AnalysisTab fundamentals={fundamentals} />
         <SectorComparison data={sectorComparison} />
       </div>
+
+      {/* AI Analysis — on-demand, only runs when user clicks */}
+      <AIAnalysisTab code={code} />
       </main>
     </div>
   );
