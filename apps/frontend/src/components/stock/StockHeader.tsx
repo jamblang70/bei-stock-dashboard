@@ -30,37 +30,37 @@ export default function StockHeader({ stock }: StockHeaderProps) {
   const changeBg = isPositive ? "bg-emerald-500/10 border-emerald-500/20" : "bg-red-500/10 border-red-500/20";
 
   return (
-    <div className="rounded-xl border border-dark-border bg-dark-surface p-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
+    <div className="rounded-xl border border-dark-border bg-dark-surface p-4 sm:p-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between sm:gap-4">
         {/* Left: identity */}
-        <div>
-          <div className="flex items-center gap-3">
-            <span className="rounded-lg bg-emerald-500 px-3 py-1 text-lg font-bold text-white">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-lg bg-emerald-500 px-2.5 py-1 text-base font-bold text-white sm:text-lg">
               {stock.code}
             </span>
             {stock.sector && (
-              <span className="rounded-full border border-dark-border bg-dark-bg px-3 py-1 text-xs text-text-secondary">
+              <span className="rounded-full border border-dark-border bg-dark-bg px-2.5 py-0.5 text-xs text-text-secondary">
                 {stock.sector}
               </span>
             )}
             {stock.is_syariah && (
-              <span className="rounded-full border border-emerald-500/30 bg-emerald-500/15 px-3 py-1 text-xs font-medium text-emerald-400">
+              <span className="rounded-full border border-emerald-500/30 bg-emerald-500/15 px-2.5 py-0.5 text-xs font-medium text-emerald-400">
                 ☪ Syariah
               </span>
             )}
           </div>
-          <h1 className="mt-2 text-xl font-semibold text-text-primary">{stock.name}</h1>
+          <h1 className="mt-1.5 text-lg font-semibold text-text-primary sm:text-xl">{stock.name}</h1>
           {stock.sub_sector && (
-            <p className="mt-0.5 text-sm text-text-muted">{stock.sub_sector}</p>
+            <p className="mt-0.5 text-xs text-text-muted sm:text-sm">{stock.sub_sector}</p>
           )}
         </div>
 
-        {/* Right: price */}
-        <div className={`rounded-xl border px-5 py-3 text-right ${changeBg}`}>
-          <p className="text-3xl font-bold text-text-primary">
+        {/* Right: price — full width on mobile */}
+        <div className={`rounded-xl border px-4 py-3 sm:px-5 sm:text-right ${changeBg}`}>
+          <p className="text-2xl font-bold text-text-primary sm:text-3xl">
             Rp {formatNumber(lastPrice, 0)}
           </p>
-          <div className={`mt-1 flex items-center justify-end gap-2 text-sm font-medium ${changeColor}`}>
+          <div className={`mt-1 flex items-center gap-2 text-sm font-medium sm:justify-end ${changeColor}`}>
             <span>
               {isPositive ? "+" : ""}
               {formatNumber(changeNominal, 0)}

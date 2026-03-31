@@ -32,7 +32,7 @@ export default function MetricsCard({ fundamentals: f }: MetricsCardProps) {
       </h2>
 
       {/* Row 1: Valuasi */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 sm:gap-0 sm:divide-x sm:divide-dark-border">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-0 sm:divide-x sm:divide-dark-border">
         <div className="sm:pr-4">
           <MetricItem label="PER" value={fmt(f?.per, 2, "x")} />
         </div>
@@ -47,10 +47,10 @@ export default function MetricsCard({ fundamentals: f }: MetricsCardProps) {
         </div>
       </div>
 
-      <div className="my-4 border-t border-dark-border/50" />
+      <div className="my-3 border-t border-dark-border/50" />
 
       {/* Row 2: Profitabilitas */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 sm:gap-0 sm:divide-x sm:divide-dark-border">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-0 sm:divide-x sm:divide-dark-border">
         <div className="sm:pr-4">
           <MetricItem label="ROE" value={fmt(f?.roe, 2, "%")} />
         </div>
@@ -65,10 +65,10 @@ export default function MetricsCard({ fundamentals: f }: MetricsCardProps) {
         </div>
       </div>
 
-      <div className="my-4 border-t border-dark-border/50" />
+      <div className="my-3 border-t border-dark-border/50" />
 
       {/* Row 3: Risiko & Likuiditas */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 sm:gap-0 sm:divide-x sm:divide-dark-border">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-0 sm:divide-x sm:divide-dark-border">
         <div className="sm:pr-4">
           <MetricItem label="DER" value={fmt(f?.debt_to_equity, 2, "x")} />
         </div>

@@ -133,6 +133,10 @@ export default function PriceChart({ code }: PriceChartProps) {
 
     const container = chartContainerRef.current;
 
+    // Ensure container has dimensions — on mobile it may be 0 initially
+    const width = container.clientWidth || container.offsetWidth || 300;
+    const height = container.clientHeight || container.offsetHeight || 300;
+
     const chart = createChart(container, {
       layout: {
         background: { type: ColorType.Solid, color: "#0a0a0f" },
@@ -156,8 +160,8 @@ export default function PriceChart({ code }: PriceChartProps) {
         borderColor: "#1f2937",
         timeVisible: false,
       },
-      width: container.clientWidth,
-      height: container.clientHeight,
+      width,
+      height,
     });
 
     const candleSeries = chart.addCandlestickSeries({
@@ -172,28 +176,44 @@ export default function PriceChart({ code }: PriceChartProps) {
     chartRef.current = chart;
     candleRef.current = candleSeries;
 
+    // Use ResizeObserver for reliable resize detection on mobile
+    const ro = new ResizeObserver(() => {
+      if (chartRef.current && chartContainerRef.current) {
+        const w = chartContainerRef.current.clientWidth;
+        if (w > 0) chartRef.current.applyOptions({ width: w });
+      }
+    });
+    ro.observe(container);
+
     const handleResize = () => {
       if (chartRef.current && chartContainerRef.current) {
         chartRef.current.applyOptions({ width: chartContainerRef.current.clientWidth });
       }
     };
     window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      ro.disconnect();
+    };
   }, []);
 
   // Init chart when data arrives
   useEffect(() => {
     if (!loading && !error && data.length > 0) {
-      const cleanup = initChart();
-      return () => {
-        cleanup?.();
-        if (chartRef.current) {
-          chartRef.current.remove();
-          chartRef.current = null;
-          candleRef.current = null;
-          lineRefs.current = {};
-        }
-      };
+      // Small delay to ensure container has dimensions on mobile
+      const timer = setTimeout(() => {
+        const cleanup = initChart();
+        return () => {
+          cleanup?.();
+          if (chartRef.current) {
+            chartRef.current.remove();
+            chartRef.current = null;
+            candleRef.current = null;
+            lineRefs.current = {};
+          }
+        };
+      }, 50);
+      return () => clearTimeout(timer);
     }
   }, [loading, error, data.length, initChart]);
 
@@ -347,15 +367,21 @@ export default function PriceChart({ code }: PriceChartProps) {
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-dark-border border-t-emerald-500" />
           </div>
         ) : error ? (
-          <div className="flex h-full items-center justify-center text-sm text-text-muted">
-            Gagal memuat data harga
+          <div className="flex h-full flex-col items-center justify-center gap-3 text-sm text-text-muted">
+            <span>Gagal memuat data harga</span>
+            <button
+              onClick={() => setRange((r) => r)}
+              className="rounded-lg border border-dark-border px-3 py-1.5 text-xs hover:bg-dark-hover transition-colors"
+            >
+              Coba Lagi
+            </button>
           </div>
         ) : data.length === 0 ? (
           <div className="flex h-full items-center justify-center text-sm text-text-muted">
             Data tidak tersedia
           </div>
         ) : (
-          <div ref={chartContainerRef} className="h-full w-full" />
+          <div key={`chart-${range}-${data.length}`} ref={chartContainerRef} className="h-full w-full" />
         )}
       </div>
 
