@@ -4,9 +4,12 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 from datetime import datetime, timedelta, timezone
 
 import httpx
+import pandas as pd
+import ta
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -16,7 +19,7 @@ from app.models.stock import FundamentalData, PriceHistory, SectorMetrics, Stock
 
 logger = logging.getLogger(__name__)
 
-PROMPT_VERSION = "1.0"
+PROMPT_VERSION = "2.0"
 
 
 # ---------------------------------------------------------------------------
@@ -24,16 +27,8 @@ PROMPT_VERSION = "1.0"
 # ---------------------------------------------------------------------------
 
 def check_data_sufficiency(db: Session, stock_id: int) -> tuple[bool, str | None]:
-    """
-    Validasi kecukupan data untuk analisa AI.
-
-    Returns:
-        (True, None) jika data cukup.
-        (False, "keterangan") jika data tidak cukup.
-    """
     missing: list[str] = []
 
-    # Cek ≥ 2 kuartal fundamental_data
     fund_count = db.execute(
         select(func.count()).select_from(FundamentalData).where(
             FundamentalData.stock_id == stock_id
@@ -43,7 +38,6 @@ def check_data_sufficiency(db: Session, stock_id: int) -> tuple[bool, str | None
     if fund_count < 2:
         missing.append(f"data fundamental kurang (tersedia {fund_count} kuartal, dibutuhkan minimal 2)")
 
-    # Cek ≥ 15 hari price_history (trading days in 30 calendar days)
     cutoff = datetime.now(tz=timezone.utc).date() - timedelta(days=30)
     price_count = db.execute(
         select(func.count()).select_from(PriceHistory).where(
@@ -63,7 +57,108 @@ def check_data_sufficiency(db: Session, stock_id: int) -> tuple[bool, str | None
 
 
 # ---------------------------------------------------------------------------
-# 2. Build Prompt
+# 2. Compute Technical Indicators
+# ---------------------------------------------------------------------------
+
+def _compute_technical(db: Session, stock_id: int) -> dict:
+    """Hitung indikator teknikal dari price_history 90 hari terakhir."""
+    cutoff = datetime.now(tz=timezone.utc).date() - timedelta(days=90)
+    rows = db.execute(
+        select(PriceHistory)
+        .where(PriceHistory.stock_id == stock_id, PriceHistory.date >= cutoff)
+        .order_by(PriceHistory.date.asc())
+    ).scalars().all()
+
+    if len(rows) < 14:
+        return {}
+
+    closes = pd.Series([float(r.close) for r in rows])
+    latest_close = float(rows[-1].close)
+
+    def _safe(val) -> float | None:
+        try:
+            v = float(val)
+            return None if math.isnan(v) else round(v, 2)
+        except Exception:
+            return None
+
+    ma20 = _safe(ta.trend.sma_indicator(closes, window=20).iloc[-1])
+    ma50 = _safe(ta.trend.sma_indicator(closes, window=50).iloc[-1]) if len(rows) >= 50 else None
+    ema20 = _safe(ta.trend.ema_indicator(closes, window=20).iloc[-1])
+    rsi = _safe(ta.momentum.rsi(closes, window=14).iloc[-1])
+    macd_line = _safe(ta.trend.macd(closes).iloc[-1])
+    macd_signal = _safe(ta.trend.macd_signal(closes).iloc[-1])
+    macd_hist = _safe(ta.trend.macd_diff(closes).iloc[-1])
+    bb_upper = _safe(ta.volatility.bollinger_hband(closes).iloc[-1])
+    bb_lower = _safe(ta.volatility.bollinger_lband(closes).iloc[-1])
+
+    # Price change
+    if len(rows) >= 20:
+        change_1m = round((latest_close - float(rows[-20].close)) / float(rows[-20].close) * 100, 2)
+    else:
+        change_1m = None
+
+    if len(rows) >= 60:
+        change_3m = round((latest_close - float(rows[-60].close)) / float(rows[-60].close) * 100, 2)
+    else:
+        change_3m = None
+
+    # Signals
+    ma_signal = "N/A"
+    if ma20 and ma50:
+        if latest_close > ma20 > ma50:
+            ma_signal = "Bullish (harga di atas MA20 dan MA50)"
+        elif latest_close < ma20 < ma50:
+            ma_signal = "Bearish (harga di bawah MA20 dan MA50)"
+        elif latest_close > ma20:
+            ma_signal = "Netral-Bullish (harga di atas MA20)"
+        else:
+            ma_signal = "Netral-Bearish (harga di bawah MA20)"
+
+    rsi_signal = "N/A"
+    if rsi is not None:
+        if rsi >= 70:
+            rsi_signal = f"Overbought ({rsi})"
+        elif rsi <= 30:
+            rsi_signal = f"Oversold ({rsi})"
+        else:
+            rsi_signal = f"Netral ({rsi})"
+
+    macd_signal_str = "N/A"
+    if macd_hist is not None:
+        macd_signal_str = "Bullish (histogram positif)" if macd_hist > 0 else "Bearish (histogram negatif)"
+
+    bb_signal = "N/A"
+    if bb_upper and bb_lower:
+        if latest_close >= bb_upper * 0.98:
+            bb_signal = "Mendekati upper band (potensi overbought)"
+        elif latest_close <= bb_lower * 1.02:
+            bb_signal = "Mendekati lower band (potensi oversold)"
+        else:
+            bb_signal = "Di dalam Bollinger Bands (normal)"
+
+    return {
+        "latest_close": latest_close,
+        "ma20": ma20,
+        "ma50": ma50,
+        "ema20": ema20,
+        "rsi": rsi,
+        "macd_line": macd_line,
+        "macd_signal": macd_signal,
+        "macd_hist": macd_hist,
+        "bb_upper": bb_upper,
+        "bb_lower": bb_lower,
+        "change_1m": change_1m,
+        "change_3m": change_3m,
+        "ma_signal": ma_signal,
+        "rsi_signal": rsi_signal,
+        "macd_signal_str": macd_signal_str,
+        "bb_signal": bb_signal,
+    }
+
+
+# ---------------------------------------------------------------------------
+# 3. Build Prompt
 # ---------------------------------------------------------------------------
 
 def build_prompt(
@@ -71,9 +166,8 @@ def build_prompt(
     fund: FundamentalData,
     sector_metrics: SectorMetrics | None,
     score: StockScore | None,
+    technical: dict | None = None,
 ) -> str:
-    """Buat prompt terstruktur Bahasa Indonesia untuk LLM."""
-
     def fmt(val, decimals: int = 2, suffix: str = "") -> str:
         if val is None:
             return "N/A"
@@ -81,48 +175,49 @@ def build_prompt(
 
     sector_per = fmt(sector_metrics.median_per if sector_metrics else None)
     sector_pbv = fmt(sector_metrics.median_pbv if sector_metrics else None)
-
-    # Hitung perubahan harga 1 bulan dan 3 bulan dari score_factors jika ada
-    change_1m = "N/A"
-    change_3m = "N/A"
-    vol_30d = fmt(fund.volatility_30d, 2, "%")
-
-    if score and score.score_factors:
-        factors = score.score_factors
-        momentum = factors.get("momentum", {})
-        # score_factors menyimpan skor, bukan perubahan langsung — gunakan N/A
-        # Perubahan harga bisa diambil dari price_history jika diperlukan
-
     score_val = fmt(score.score if score else None, 1)
 
-    prompt = f"""Kamu adalah analis saham profesional Indonesia. Analisa saham berikut berdasarkan data yang diberikan dan berikan penilaian objektif.
+    t = technical or {}
+    change_1m = f"{t.get('change_1m', 'N/A')}%" if t.get('change_1m') is not None else "N/A"
+    change_3m = f"{t.get('change_3m', 'N/A')}%" if t.get('change_3m') is not None else "N/A"
+
+    prompt = f"""Kamu adalah analis saham profesional Indonesia. Analisa saham berikut berdasarkan data fundamental DAN teknikal yang diberikan.
 
 Data Saham: {stock.code} - {stock.name}
 Sektor: {stock.sector or "N/A"}
 
-Data Fundamental (kuartal terakhir):
+=== DATA FUNDAMENTAL ===
 - PER: {fmt(fund.per)} (median sektor: {sector_per})
 - PBV: {fmt(fund.pbv)} (median sektor: {sector_pbv})
 - ROE: {fmt(fund.roe, 2, "%")}
+- ROA: {fmt(fund.roa, 2, "%")}
 - DER: {fmt(fund.debt_to_equity)}
 - Net Profit Margin: {fmt(fund.net_profit_margin, 2, "%")}
+- Current Ratio: {fmt(fund.current_ratio)}
 - Dividend Yield: {fmt(fund.dividend_yield, 2, "%")}
+- EPS: {fmt(fund.eps)}
 
-Momentum Teknikal:
-- Perubahan 1 bulan: {change_1m}
-- Perubahan 3 bulan: {change_3m}
-- Volatilitas 30 hari: {vol_30d}
+=== DATA TEKNIKAL ===
+- Harga Terakhir: {fmt(t.get('latest_close'), 0)}
+- Perubahan 1 Bulan: {change_1m}
+- Perubahan 3 Bulan: {change_3m}
+- MA20: {fmt(t.get('ma20'), 0)} | MA50: {fmt(t.get('ma50'), 0)}
+- Sinyal MA: {t.get('ma_signal', 'N/A')}
+- RSI (14): {t.get('rsi_signal', 'N/A')}
+- MACD: {t.get('macd_signal_str', 'N/A')}
+- Bollinger Bands: {t.get('bb_signal', 'N/A')}
 
-Skor Internal: {score_val}/100
+=== SKOR INTERNAL ===
+Skor: {score_val}/100
 
-Berikan analisa dalam format JSON berikut (tanpa markdown, hanya JSON murni):
+Berikan analisa komprehensif yang menggabungkan fundamental dan teknikal dalam format JSON berikut (tanpa markdown, hanya JSON murni):
 {{
   "recommendation": "Beli Kuat|Beli|Tahan|Jual",
-  "summary": "ringkasan 2-3 kalimat dalam Bahasa Indonesia",
-  "valuation_analysis": "analisa valuasi dalam Bahasa Indonesia",
-  "quality_analysis": "analisa kualitas fundamental dalam Bahasa Indonesia",
-  "momentum_analysis": "analisa momentum teknikal dalam Bahasa Indonesia",
-  "supporting_factors": ["faktor 1", "faktor 2", "faktor 3"]
+  "summary": "ringkasan 2-3 kalimat yang mencakup kondisi fundamental dan teknikal dalam Bahasa Indonesia",
+  "valuation_analysis": "analisa valuasi fundamental dalam Bahasa Indonesia",
+  "quality_analysis": "analisa kualitas fundamental (profitabilitas, likuiditas) dalam Bahasa Indonesia",
+  "momentum_analysis": "analisa teknikal (RSI, MACD, MA, BB) dalam Bahasa Indonesia",
+  "supporting_factors": ["faktor pendukung 1", "faktor pendukung 2", "faktor pendukung 3"]
 }}"""
 
     return prompt
@@ -313,8 +408,11 @@ def run_ai_analysis(db: Session, stock_id: int) -> AIAnalysis:
         .limit(1)
     ).scalar_one_or_none()
 
+    # 2b. Hitung indikator teknikal
+    technical = _compute_technical(db, stock_id)
+
     # 3. Build prompt
-    prompt = build_prompt(stock, fund, sector_metrics, score)
+    prompt = build_prompt(stock, fund, sector_metrics, score, technical)
 
     # 4. Call LLM
     model_used = "gpt-4o-mini" if settings.OPENAI_API_KEY else "gemini-1.5-flash"
