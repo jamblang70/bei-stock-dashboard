@@ -123,3 +123,52 @@ class StockListResponse(BaseModel):
     page: int
     per_page: int
     total_pages: int
+
+
+# ---------------------------------------------------------------------------
+# Today's Stocks
+# ---------------------------------------------------------------------------
+
+
+class TodayStockItem(BaseModel):
+    code: str
+    name: str
+    sector: str | None = None
+    last_price: float | None = None
+    change_pct: float | None = None
+    volume: int | None = None
+
+
+class TodayResponse(BaseModel):
+    top_gainers: list[TodayStockItem]
+    top_losers: list[TodayStockItem]
+    most_active: list[TodayStockItem]
+
+
+# ---------------------------------------------------------------------------
+# Stock Comparison
+# ---------------------------------------------------------------------------
+
+
+class CompareStockItem(BaseModel):
+    code: str
+    name: str
+    sector: str | None = None
+    last_price: float | None = None
+    change_pct: float | None = None
+    per: float | None = None
+    pbv: float | None = None
+    roe: float | None = None
+    roa: float | None = None
+    net_profit_margin: float | None = None
+    debt_to_equity: float | None = None
+    current_ratio: float | None = None
+    dividend_yield: float | None = None
+    eps: float | None = None
+    beta: float | None = None
+    score: float | None = None
+    recommendation: str | None = None
+
+
+class CompareResponse(BaseModel):
+    stocks: list[CompareStockItem]

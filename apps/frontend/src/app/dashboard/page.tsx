@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { apiGet } from "@/lib/api";
 import type { PaginatedResponse, RankingItem } from "@/types";
 import RankingTable from "@/components/ranking/RankingTable";
@@ -73,6 +74,15 @@ export default function DashboardPage() {
                 </h1>
                 <p className="text-xs text-text-secondary sm:text-sm">Ranking Saham Terbaik</p>
               </div>
+              <nav className="flex items-center gap-3 text-sm ml-4">
+                <span className="text-emerald-400 font-medium">Dashboard</span>
+                <Link href="/today" className="text-text-secondary hover:text-emerald-400 transition-colors">
+                  Saham Hari Ini
+                </Link>
+                <Link href="/compare" className="text-text-secondary hover:text-emerald-400 transition-colors">
+                  Bandingkan
+                </Link>
+              </nav>
             </div>
             <SearchBar />
           </div>
