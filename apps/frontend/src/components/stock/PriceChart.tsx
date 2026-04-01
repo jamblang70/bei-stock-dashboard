@@ -200,20 +200,29 @@ export default function PriceChart({ code }: PriceChartProps) {
   // Init chart when data arrives
   useEffect(() => {
     if (!loading && !error && data.length > 0) {
-      // Small delay to ensure container has dimensions on mobile
+      let cleanup: (() => void) | undefined;
+      // Longer delay on mobile to ensure container is laid out
       const timer = setTimeout(() => {
-        const cleanup = initChart();
-        return () => {
-          cleanup?.();
-          if (chartRef.current) {
-            chartRef.current.remove();
-            chartRef.current = null;
-            candleRef.current = null;
-            lineRefs.current = {};
+        cleanup = initChart();
+        // Force resize after init
+        if (chartRef.current && chartContainerRef.current) {
+          const w = chartContainerRef.current.clientWidth;
+          if (w > 0) {
+            chartRef.current.applyOptions({ width: w });
+            chartRef.current.timeScale().fitContent();
           }
-        };
-      }, 50);
-      return () => clearTimeout(timer);
+        }
+      }, 200);
+      return () => {
+        clearTimeout(timer);
+        cleanup?.();
+        if (chartRef.current) {
+          chartRef.current.remove();
+          chartRef.current = null;
+          candleRef.current = null;
+          lineRefs.current = {};
+        }
+      };
     }
   }, [loading, error, data.length, initChart]);
 
@@ -233,6 +242,11 @@ export default function PriceChart({ code }: PriceChartProps) {
     }));
 
     candleRef.current.setData(candleData);
+    // Force resize + fit after data load (fixes mobile blank chart)
+    if (chartRef.current && chartContainerRef.current) {
+      const w = chartContainerRef.current.clientWidth;
+      if (w > 0) chartRef.current.applyOptions({ width: w });
+    }
     chartRef.current?.timeScale().fitContent();
   }, [data]);
 
